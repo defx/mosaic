@@ -1,7 +1,7 @@
 {
   "name": "x-static",
   "type": "module",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "description": "",
   "main": "x-static.js",
   "scripts": {
@@ -12,7 +12,7 @@
     "url": "git+https://github.com/defx/x-static.git"
   },
   "keywords": [],
-  "author": "",
+  "author": "defx",
   "license": "ISC",
   "bugs": {
     "url": "https://github.com/defx/x-static/issues"

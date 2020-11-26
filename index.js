@@ -9,7 +9,6 @@ import customElementTagNames from './customElementTagNames.js';
 const basename = (v) => path.basename(v, path.extname(v));
 const IDENTITY = (v) => v;
 const COMPONENTS_PLACEHOLDER = '<!-- {{ COMPONENT DEFS }} -->';
-const TESTS_PLACEHOLDER = '<!-- {{ TEST SCRIPTS }}-->';
 const registry = {};
 const app = express();
 const PORT = process.env.PORT || 5000;
