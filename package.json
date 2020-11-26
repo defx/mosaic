@@ -1,0 +1,29 @@
+{
+  "name": "x-static",
+  "type": "module",
+  "version": "1.0.0",
+  "description": "",
+  "main": "x-static.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/defx/x-static.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/defx/x-static/issues"
+  },
+  "homepage": "https://github.com/defx/x-static#readme",
+  "dependencies": {
+    "chokidar": "^3.4.3",
+    "express": "^4.17.1",
+    "fs": "0.0.1-security",
+    "glob": "^7.1.6",
+    "glob-promise": "^3.4.0",
+    "path": "^0.12.7"
+  }
+}
