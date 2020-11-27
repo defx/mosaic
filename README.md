@@ -22,8 +22,8 @@ Now add some npm scripts to your package.json...
 ```json
 {
   "scripts": {
-    "build": "fragments build",
-    "dev": "fragments dev"
+    "build": "mosaic build",
+    "dev": "mosaic dev"
   }
 }
 ```
