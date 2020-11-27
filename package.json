@@ -1,23 +1,20 @@
 {
-  "name": "x-static",
+  "name": "@defx/mosaic",
   "type": "module",
   "version": "0.1.0",
   "description": "",
-  "main": "x-static.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
+  "main": "index.js",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/defx/x-static.git"
+    "url": "git+https://github.com/defx/mosaic.git"
   },
   "keywords": [],
   "author": "defx",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/defx/x-static/issues"
+    "url": "https://github.com/defx/mosaic/issues"
   },
-  "homepage": "https://github.com/defx/x-static#readme",
+  "homepage": "https://github.com/defx/mosaic#readme",
   "dependencies": {
     "chokidar": "^3.4.3",
     "express": "^4.17.1",
@@ -25,5 +22,8 @@
     "glob": "^7.1.6",
     "glob-promise": "^3.4.0",
     "path": "^0.12.7"
+  },
+  "bin": {
+    "mosaic": "index.js"
   }
 }

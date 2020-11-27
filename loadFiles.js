@@ -2,11 +2,8 @@ import fs from 'fs';
 import glob from 'glob-promise';
 import path from 'path';
 
-function loadFiles(
-  globPath,
-  basePath = process.env.INIT_CWD || process.env.PWD
-) {
-  return glob(path.join(basePath, globPath)).then((paths) =>
+function loadFiles(globPath) {
+  return glob(globPath).then((paths) =>
     Promise.all(
       paths.map((filepath) =>
         fs.promises

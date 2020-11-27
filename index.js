@@ -1,4 +1,7 @@
+#!/usr/bin/env node
+
 import chokidar from 'chokidar';
+import deepmerge from 'deepmerge';
 import express from 'express';
 import fs from 'fs';
 import path from 'path';
@@ -6,9 +9,11 @@ import path from 'path';
 import loadFiles from './loadFiles.js';
 import customElementTagNames from './customElementTagNames.js';
 
+const CWD = process.env.INIT_CWD || process.env.PWD;
+
 const basename = (v) => path.basename(v, path.extname(v));
 const IDENTITY = (v) => v;
-const COMPONENTS_PLACEHOLDER = '<!-- {{ COMPONENT DEFS }} -->';
+const COMPONENTS_PLACEHOLDER = '<!-- {{ COMPONENTS }} -->';
 const registry = {};
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -18,26 +23,20 @@ const pageCache = {};
 const pageTemplates = {};
 const pageToComponentsMap = {};
 
+const GLOB_COMPONENTS = './components/*.html';
+const GLOB_PAGES = './pages/*.html';
+const OUTPUT_DIR = './public';
+
 app.use(express.static(staticPath));
-
-let config = {
-  transformPageHTML: IDENTITY,
-};
-
-const configure = () =>
-  import('./x-static.config.js')
-    .then((v) => {
-      config = v.default;
-    })
-    .catch(() => {});
 
 const updateRegistry = (name, content) => {
   registry[name] = content;
 };
 
 const initialiseComponents = () =>
-  loadFiles('./components/*.html').then((components) => {
-    components.map(([name, content]) => updateRegistry(name, content));
+  loadFiles(GLOB_COMPONENTS).then((components) => {
+    components.forEach(([name, content]) => updateRegistry(name, content));
+    return components;
   });
 
 const componentDefs = (filter = IDENTITY) =>
@@ -53,27 +52,27 @@ const pagesThatIncludeComponent = (componentName) =>
 
 const buildPage = (name) => {
   let html = pageTemplates[name];
-  let names = customElementTagNames(html);
-  pageToComponentsMap[name] = names;
+  let names = pageToComponentsMap[name];
   let filter = (name) => names.includes(name);
-  let v = html.replace(COMPONENTS_PLACEHOLDER, componentDefs(filter));
-  pageCache[name] = config.transformPageHTML(v);
-  return fs.promises.writeFile(`./dist/${name}.html`, v);
+  return (pageCache[name] = html.replace(
+    COMPONENTS_PLACEHOLDER,
+    componentDefs(filter)
+  ));
 };
 
 const updatePage = (name, content) => {
   pageTemplates[name] = content;
-  buildPage(name);
+  pageToComponentsMap[name] = customElementTagNames(content);
+  return buildPage(name);
 };
+
+const savePage = (name, html) =>
+  fs.promises.writeFile(path.join(OUTPUT_DIR, `${name}.html`), html);
 
 const initialisePages = () =>
-  loadFiles('./pages/*.html').then((pages) => {
-    pages.map(([name, content]) => updatePage(name, content));
-  });
-
-const ensureDir = (dir) => {
-  if (!fs.existsSync(dir)) fs.mkdirSync(dir);
-};
+  loadFiles(GLOB_PAGES).then((pages) =>
+    pages.map(([name, content]) => [name, updatePage(name, content)])
+  );
 
 const onComponentChange = (path) => {
   let name = basename(path);
@@ -83,9 +82,7 @@ const onComponentChange = (path) => {
   });
 };
 
-/*
-  bonus: inject websocket script into pages so that we can live reload 
-*/
+/* @TODO: add WS reload  */
 const initialiseServer = () => {
   Object.keys(pageCache).forEach((name) => {
     let route = '/' + (name === 'index' ? '' : name);
@@ -97,16 +94,42 @@ const initialiseServer = () => {
   app.listen(PORT, () => console.log(`dev server listening on port ${PORT}`));
 };
 
-const watch = () => {
-  chokidar.watch('./components/*.html').on('change', onComponentChange);
+/* @TODO: handle add/remove */
+const initialiseWatchers = () => {
+  chokidar.watch(GLOB_COMPONENTS).on('change', onComponentChange);
+  chokidar.watch(GLOB_PAGES).on('change', updatePage);
 };
 
-const initialise = () =>
-  configure()
-    .then(initialiseComponents)
+const ensureOutputDir = (dir = OUTPUT_DIR) =>
+  fs.promises.stat(dir).catch(() => fs.promises.mkdir(dir));
+
+/* @TODO: logging */
+const dev = () =>
+  initialiseComponents()
     .then(initialisePages)
     .then(initialiseServer)
-    .then(watch);
+    .then(initialiseWatchers);
 
-ensureDir('./dist');
-initialise();
+/* @TODO: logging */
+const build = () =>
+  ensureOutputDir()
+    .then(initialiseComponents)
+    .then(initialisePages)
+    .then((pages) =>
+      Promise.all(pages.map(([name, html]) => savePage(name, html)))
+    );
+
+const [cmd] = process.argv.slice(2);
+
+switch (cmd) {
+  case 'dev':
+    dev();
+    break;
+  case 'build':
+    build();
+    break;
+  default:
+    console.error(
+      `mosaic command expects either "dev" or "build" as the first and only argument`
+    );
+}
