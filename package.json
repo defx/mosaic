@@ -1,7 +1,7 @@
 {
   "name": "@defx/mosaic",
   "type": "module",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Simple build and development server workflow for web components defined as self-contained HTML fragments.",
   "main": "index.js",
   "repository": {
