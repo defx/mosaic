@@ -54,7 +54,6 @@ const configure = () =>
   import(path.join(CWD, './mosaic.config.js')).then(
     (v) => (config = deepmerge(config, v.default))
   );
-// .catch(() => console.log('no config'));
 
 const ensureOutputDir = (outputDir) =>
   fs.promises.stat(outputDir).catch(() => fs.promises.mkdir(outputDir));
@@ -115,23 +114,28 @@ const updateCache = () =>
 
 const dev = () => {
   updateCache().then(() => {
-    //...initialise server
-
-    // a middleware function with no mount path. This code is executed for every request to the router
     app.use(function (req, res, next) {
       let name = req.originalUrl;
-      if (name === '/') name = 'index';
+      name = name === '/' ? 'index' : name.slice(1);
 
       let entry = pageCache[name];
 
-      if (!entry) next();
-
-      res.send(config.dev.transform(entry));
+      if (entry) {
+        res.send(config.dev.transform(entry));
+      } else {
+        next();
+      }
     });
 
     app.listen(config.port, () =>
       console.log(`dev server listening on port ${config.port}`)
     );
+
+    chokidar
+      .watch([config.templates, config.fragments])
+      .on('change', updateCache)
+      .on('add', updateCache)
+      .on('unlink', updateCache);
   });
 };
 
