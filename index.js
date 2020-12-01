@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import chokidar from 'chokidar';
+import deepmerge from 'deepmerge';
 import express from 'express';
 import fs from 'fs';
 import path from 'path';
@@ -32,6 +33,22 @@ const updateRegistry = (name, content) => {
   registry[name] = content;
 };
 
+let config = {
+  dev: {
+    transform: IDENTITY,
+  },
+  build: {
+    transform: IDENTITY,
+  },
+};
+
+let transform = config.dev.transform;
+
+const configure = () =>
+  import(path.join(CWD, './mosaic.config.js'))
+    .then((v) => (config = deepmerge(config, v.default)))
+    .catch(() => {});
+
 const initialiseComponents = () =>
   loadFiles(GLOB_COMPONENTS).then((components) => {
     components.forEach(([name, content]) => updateRegistry(name, content));
@@ -53,10 +70,12 @@ const buildPage = (name) => {
   let html = pageTemplates[name];
   let names = pageToComponentsMap[name];
   let filter = (name) => names.includes(name);
-  return (pageCache[name] = html.replace(
-    COMPONENTS_PLACEHOLDER,
-    componentDefs(filter)
-  ));
+
+  html = html.replace(COMPONENTS_PLACEHOLDER, componentDefs(filter));
+
+  pageCache[name] = config.dev.transform(html);
+
+  return html;
 };
 
 const updatePage = (name, content) => {
@@ -66,7 +85,10 @@ const updatePage = (name, content) => {
 };
 
 const savePage = (name, html) =>
-  fs.promises.writeFile(path.join(OUTPUT_DIR, `${name}.html`), html);
+  fs.promises.writeFile(
+    path.join(OUTPUT_DIR, `${name}.html`),
+    config.build.transform(html)
+  );
 
 const initialisePages = () =>
   loadFiles(GLOB_PAGES).then((pages) =>
@@ -105,19 +127,21 @@ const initialiseWatchers = () => {
     );
 };
 
-const ensureOutputDir = (dir = OUTPUT_DIR) =>
-  fs.promises.stat(dir).catch(() => fs.promises.mkdir(dir));
+const ensureOutputDir = () =>
+  fs.promises.stat(OUTPUT_DIR).catch(() => fs.promises.mkdir(OUTPUT_DIR));
 
 /* @TODO: logging */
 const dev = () =>
-  initialiseComponents()
+  configure()
+    .then(initialiseComponents)
     .then(initialisePages)
     .then(initialiseServer)
     .then(initialiseWatchers);
 
 /* @TODO: logging */
 const build = () =>
-  ensureOutputDir()
+  configure()
+    .then(ensureOutputDir)
     .then(initialiseComponents)
     .then(initialisePages)
     .then((pages) =>
