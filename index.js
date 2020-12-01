@@ -1,39 +1,47 @@
 #!/usr/bin/env node
 
+/*
+export default {
+    templates: "./pages/*.html",
+    fragments: "./components/*.html",
+    placeholder: "<!-- {{ COMPONENTS }} -->",
+    outputDir: "./public",
+    filter(template, fragments) {
+        //....
+    },
+    dev: {
+        transform() {
+            //...
+        }
+    },
+    build: {
+        transform() {
+            //...
+        }
+    }
+}
+*/
+
 import chokidar from 'chokidar';
 import deepmerge from 'deepmerge';
 import express from 'express';
 import fs from 'fs';
+import glob from 'glob-promise';
 import path from 'path';
 
-import loadFiles from './loadFiles.js';
-import customElementTagNames from './customElementTagNames.js';
-
 const CWD = process.env.INIT_CWD || process.env.PWD;
-
 const basename = (v) => path.basename(v, path.extname(v));
 const IDENTITY = (v) => v;
-const COMPONENTS_PLACEHOLDER = '<!-- {{ COMPONENTS }} -->';
-const registry = {};
+
 const app = express();
 const PORT = process.env.PORT || 5000;
 const staticPath = './static';
 
-const pageCache = {};
-const pageTemplates = {};
-const pageToComponentsMap = {};
-
-const GLOB_COMPONENTS = './components/*.html';
-const GLOB_PAGES = './pages/*.html';
-const OUTPUT_DIR = './public';
-
 app.use(express.static(staticPath));
 
-const updateRegistry = (name, content) => {
-  registry[name] = content;
-};
-
 let config = {
+  port: 5000,
+  filter: IDENTITY,
   dev: {
     transform: IDENTITY,
   },
@@ -42,111 +50,90 @@ let config = {
   },
 };
 
-let transform = config.dev.transform;
-
 const configure = () =>
-  import(path.join(CWD, './mosaic.config.js'))
-    .then((v) => (config = deepmerge(config, v.default)))
-    .catch(() => {});
-
-const initialiseComponents = () =>
-  loadFiles(GLOB_COMPONENTS).then((components) => {
-    components.forEach(([name, content]) => updateRegistry(name, content));
-    return components;
-  });
-
-const componentDefs = (filter = IDENTITY) =>
-  Object.entries(registry)
-    .filter(([name, html]) => filter(name))
-    .map(([name, html]) => html)
-    .join('\n');
-
-const pagesThatIncludeComponent = (componentName) =>
-  Object.entries(pageToComponentsMap)
-    .filter(([pageName, components]) => components.includes(componentName))
-    .map(([pageName]) => pageName);
-
-const buildPage = (name) => {
-  let html = pageTemplates[name];
-  let names = pageToComponentsMap[name];
-  let filter = (name) => names.includes(name);
-
-  html = html.replace(COMPONENTS_PLACEHOLDER, componentDefs(filter));
-
-  pageCache[name] = config.dev.transform(html);
-
-  return html;
-};
-
-const updatePage = (name, content) => {
-  pageTemplates[name] = content;
-  pageToComponentsMap[name] = customElementTagNames(content);
-  return buildPage(name);
-};
-
-const savePage = (name, html) =>
-  fs.promises.writeFile(
-    path.join(OUTPUT_DIR, `${name}.html`),
-    config.build.transform(html)
+  import(path.join(CWD, './mosaic.config.js')).then(
+    (v) => (config = deepmerge(config, v.default))
   );
+// .catch(() => console.log('no config'));
 
-const initialisePages = () =>
-  loadFiles(GLOB_PAGES).then((pages) =>
-    pages.map(([name, content]) => [name, updatePage(name, content)])
+const ensureOutputDir = (outputDir) =>
+  fs.promises.stat(outputDir).catch(() => fs.promises.mkdir(outputDir));
+
+function loadFiles(globPath) {
+  return glob(globPath).then((paths) =>
+    Promise.all(
+      paths.map((filepath) =>
+        fs.promises
+          .readFile(filepath, 'utf8')
+          .then((v) => [path.basename(filepath), v])
+      )
+    )
   );
+}
 
-const onComponentChange = (path) => {
-  let name = basename(path);
-  fs.promises.readFile(path, 'utf8').then((content) => {
-    updateRegistry(name, content);
-    pagesThatIncludeComponent(name).map(buildPage);
-  });
-};
-
-/* @TODO: add WS reload  */
-const initialiseServer = () => {
-  Object.keys(pageCache).forEach((name) => {
-    let route = '/' + (name === 'index' ? '' : name);
-    app.get(route, (_, res) => {
-      res.send(pageCache[name]);
-    });
-  });
-
-  app.listen(PORT, () => console.log(`dev server listening on port ${PORT}`));
-};
-
-/* @TODO: handle add/remove */
-const initialiseWatchers = () => {
-  chokidar.watch(GLOB_COMPONENTS).on('change', onComponentChange);
-  chokidar
-    .watch(GLOB_PAGES)
-    .on('change', (path) =>
-      fs.promises
-        .readFile(path, 'utf8')
-        .then((content) => updatePage(basename(path), content))
-    );
-};
-
-const ensureOutputDir = () =>
-  fs.promises.stat(OUTPUT_DIR).catch(() => fs.promises.mkdir(OUTPUT_DIR));
-
-/* @TODO: logging */
-const dev = () =>
+const compile = () =>
   configure()
-    .then(initialiseComponents)
-    .then(initialisePages)
-    .then(initialiseServer)
-    .then(initialiseWatchers);
+    .then(() =>
+      Promise.all([
+        loadFiles(config.templates),
+        loadFiles(config.fragments),
+        ensureOutputDir(config.outputDir),
+      ])
+    )
+    .then(([templates, fragments]) =>
+      templates.map(([name, content]) => [
+        name,
+        content.replace(
+          config.placeholder,
+          config
+            .filter(content, fragments)
+            .map(([name, content]) => content)
+            .join('\n')
+        ),
+      ])
+    );
 
-/* @TODO: logging */
 const build = () =>
-  configure()
-    .then(ensureOutputDir)
-    .then(initialiseComponents)
-    .then(initialisePages)
-    .then((pages) =>
-      Promise.all(pages.map(([name, html]) => savePage(name, html)))
+  compile().then((files) =>
+    files.map(([name, content]) =>
+      fs.promises.writeFile(
+        path.join(config.outputDir, name),
+        config.build.transform(content)
+      )
+    )
+  );
+
+let pageCache = {};
+
+const updateCache = () =>
+  compile().then((files) => {
+    pageCache = files.reduce((a, [filename, content]) => {
+      a[basename(filename)] = content;
+      return a;
+    }, {});
+  });
+
+const dev = () => {
+  updateCache().then(() => {
+    //...initialise server
+
+    // a middleware function with no mount path. This code is executed for every request to the router
+    app.use(function (req, res, next) {
+      let name = req.originalUrl;
+      if (name === '/') name = 'index';
+
+      let entry = pageCache[name];
+
+      if (!entry) next();
+
+      res.send(config.dev.transform(entry));
+    });
+
+    app.listen(config.port, () =>
+      console.log(`dev server listening on port ${config.port}`)
     );
+  });
+};
 
 const [cmd] = process.argv.slice(2);
 
