@@ -96,7 +96,13 @@ const initialiseServer = () => {
 /* @TODO: handle add/remove */
 const initialiseWatchers = () => {
   chokidar.watch(GLOB_COMPONENTS).on('change', onComponentChange);
-  chokidar.watch(GLOB_PAGES).on('change', updatePage);
+  chokidar
+    .watch(GLOB_PAGES)
+    .on('change', (path) =>
+      fs.promises
+        .readFile(path, 'utf8')
+        .then((content) => updatePage(basename(path), content))
+    );
 };
 
 const ensureOutputDir = (dir = OUTPUT_DIR) =>
