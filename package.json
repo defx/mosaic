@@ -2,7 +2,7 @@
   "name": "@defx/mosaic",
   "type": "module",
   "version": "0.1.1",
-  "description": "Simple build and development server workflow for web components defined as self-contained HTML fragments.",
+  "description": "Mosaic is a node command line utility made primarily for transforming and combining HTML assets.",
   "main": "index.js",
   "repository": {
     "type": "git",

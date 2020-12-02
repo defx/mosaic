@@ -1,13 +1,10 @@
 # @defx/mosaic
 
-Simple build and development server workflow for web components defined as self-contained HTML fragments.
+Mosaic is a node command line utility made primarily for transforming and combining HTML assets.
 
-## Workflow
+It is configured using a config file named mosaic.config.js. This file is used to define custom rules for a project, allowing developers to write custom tasks that they want to perform when bundling files together.
 
-1. define your web components as HTML files within your `/components` folder.
-2. define your pages as HTML files within your `/pages` folder, adding a comment placeholder (`<!-- COMPONENTS -->`) wherever you would like the relevant component definitions to be included within each page.
-3. run `mosaic build` and the built files will be saved inside the `/public` folder.
-4. run `mosaic dev` and get a development server running on `http://localhost:5000`. it will rebuild your files whenever you make any changes to your pages or components.
+Mosaic also provides a dev server that can be used as an HTTP server for serving and rebuilding files automatically while developing
 
 ## Install
 
@@ -17,13 +14,4 @@ To install locally within your project...
 $ npm install --save-dev @defx/mosaic
 ```
 
-Now add some npm scripts to your package.json...
-
-```json
-{
-  "scripts": {
-    "build": "mosaic build",
-    "dev": "mosaic dev"
-  }
-}
-```
+## Configuration
