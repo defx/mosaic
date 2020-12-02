@@ -41,6 +41,7 @@ app.use(express.static(staticPath));
 
 let config = {
   port: 5000,
+  replace: IDENTITY,
   filter: IDENTITY,
   dev: {
     transform: IDENTITY,
@@ -82,8 +83,8 @@ const compile = () =>
     .then(([templates, fragments]) =>
       templates.map(([name, content]) => [
         name,
-        content.replace(
-          config.placeholder,
+        config.replace(
+          content,
           config
             .filter(content, fragments)
             .map(([name, content]) => content)
