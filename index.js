@@ -62,48 +62,47 @@ const ensureOutputDir = (outputDir) =>
 function loadFiles(globPath) {
   return glob(globPath).then((paths) =>
     Promise.all(
-      paths.map((filepath) =>
-        fs.promises
-          .readFile(filepath, 'utf8')
-          .then((v) => [path.basename(filepath), v])
+      paths.map((filename) =>
+        fs.promises.readFile(filename, 'utf8').then((content) => ({
+          content,
+          name: path.basename(filename),
+          filename,
+        }))
       )
     )
   );
 }
 
-const compile = () =>
+const compile = (transformFragment = (frag) => frag.content) =>
   Promise.all([
     loadFiles(config.templates),
     loadFiles(config.fragments),
-    ensureOutputDir(config.outputDir),
+    config.outputDir ? ensureOutputDir(config.outputDir) : Promise.resolve(),
   ]).then(([templates, fragments]) =>
-    templates.map(([name, content]) => [
-      name,
-      config.replace(
-        content,
-        config
-          .filter(content, fragments)
-          .map(([name, content]) => content)
-          .join('\n')
+    templates.map((tpl) => ({
+      ...tpl,
+      content: config.replace(
+        tpl.content,
+        config.filter(tpl, fragments).map(transformFragment).join('\n')
       ),
-    ])
+    }))
   );
 
 const build = () =>
-  compile().then((files) =>
-    files.map(([name, content]) =>
+  compile(config.build.transformFragment).then((files) => {
+    return files.map(({ name, content, filename }) =>
       fs.promises.writeFile(
-        path.join(config.outputDir, name),
+        config.outputDir ? path.join(config.outputDir, name) : config.output,
         config.build.transform(content)
       )
-    )
-  );
+    );
+  });
 
 let pageCache = {};
 
 const updateCache = () =>
-  compile().then((files) => {
-    pageCache = files.reduce((a, [filename, content]) => {
+  compile(config.dev.transformFragment).then((files) => {
+    pageCache = files.reduce((a, { filename, content }) => {
       a[basename(filename)] = content;
       return a;
     }, {});
