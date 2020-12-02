@@ -51,9 +51,9 @@ let config = {
   },
 };
 
-const configure = () =>
+const configure = (key) =>
   import(path.join(CWD, './mosaic.config.js')).then(
-    (v) => (config = deepmerge(config, v.default))
+    (v) => (config = deepmerge(config, key ? v.default[key] : v.default))
   );
 
 const ensureOutputDir = (outputDir) =>
@@ -72,26 +72,22 @@ function loadFiles(globPath) {
 }
 
 const compile = () =>
-  configure()
-    .then(() =>
-      Promise.all([
-        loadFiles(config.templates),
-        loadFiles(config.fragments),
-        ensureOutputDir(config.outputDir),
-      ])
-    )
-    .then(([templates, fragments]) =>
-      templates.map(([name, content]) => [
-        name,
-        config.replace(
-          content,
-          config
-            .filter(content, fragments)
-            .map(([name, content]) => content)
-            .join('\n')
-        ),
-      ])
-    );
+  Promise.all([
+    loadFiles(config.templates),
+    loadFiles(config.fragments),
+    ensureOutputDir(config.outputDir),
+  ]).then(([templates, fragments]) =>
+    templates.map(([name, content]) => [
+      name,
+      config.replace(
+        content,
+        config
+          .filter(content, fragments)
+          .map(([name, content]) => content)
+          .join('\n')
+      ),
+    ])
+  );
 
 const build = () =>
   compile().then((files) =>
@@ -140,14 +136,14 @@ const dev = () => {
   });
 };
 
-const [cmd] = process.argv.slice(2);
+const [cmd, key] = process.argv.slice(2);
 
 switch (cmd) {
   case 'dev':
-    dev();
+    configure(key).then(dev);
     break;
   case 'build':
-    build();
+    configure(key).then(build);
     break;
   default:
     console.error(
