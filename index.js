@@ -13,10 +13,13 @@ const IDENTITY = (v) => v;
 
 let config = {};
 
-const configure = (key) =>
-  import(path.join(CWD, './mosaic.config.js')).then(
-    (v) => (config = key ? v.default[key] : v.default)
-  );
+const configure = (key, mode) =>
+  import(path.join(CWD, './mosaic.config.js')).then((v) => {
+    let target = key ? v.default[key] : v.default;
+    target = target[mode] || target;
+    config = target;
+    //(config = key ? v.default[key] : v.default)
+  });
 
 let cache = {
   fragments: {},
@@ -74,7 +77,7 @@ const initialise = () => {
 
 const pageCache = {};
 
-const build = () => {
+const compile = () => {
   let templates = config.cache;
   let fragmentConfigs = config.fragments;
 
@@ -86,9 +89,10 @@ const build = () => {
       return reduce(tpl, fragments);
     }, content);
 
-    pageCache[basename(filename)] = tpl;
-
-    //save?
+    pageCache[basename(filename)] = {
+      ...template,
+      content: tpl,
+    };
   });
 };
 
@@ -106,7 +110,7 @@ const serve = () => {
     let entry = pageCache[name];
 
     if (entry) {
-      res.send(entry);
+      res.send(entry.content);
     } else {
       next();
     }
@@ -118,23 +122,35 @@ const serve = () => {
 
   chokidar
     .watch([config.templates, ...config.fragments.map(({ input }) => input)])
-    .on('change', build)
-    .on('add', build)
-    .on('unlink', build);
+    .on('change', compile)
+    .on('add', compile)
+    .on('unlink', compile);
 };
 
-const dev = () => {
-  initialise().then(build).then(serve);
+const ensureOutputDir = () =>
+  fs.promises
+    .stat(config.outputDir)
+    .catch(() => fs.promises.mkdir(config.outputDir));
+
+const save = () => {
+  Object.values(pageCache).map(({ filename, content }) => {
+    let filepath = path.join(config.outputDir, path.basename(filename));
+    return fs.promises.writeFile(filepath, content);
+  });
 };
+
+const dev = () => initialise().then(compile).then(serve);
+
+const build = () => initialise().then(ensureOutputDir).then(compile).then(save);
 
 const [cmd, key] = process.argv.slice(2);
 
 switch (cmd) {
   case 'dev':
-    configure(key).then(dev);
+    configure(key, 'dev').then(dev);
     break;
   case 'build':
-    configure(key).then(build);
+    configure(key, 'build').then(build);
     break;
   default:
     console.error(
