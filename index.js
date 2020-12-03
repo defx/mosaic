@@ -11,11 +11,6 @@ const CWD = process.env.INIT_CWD || process.env.PWD;
 const basename = (v) => path.basename(v, path.extname(v));
 const IDENTITY = (v) => v;
 
-const app = express();
-const staticPath = './static';
-
-app.use(express.static(staticPath));
-
 let config = {};
 
 const configure = (key) =>
@@ -23,23 +18,39 @@ const configure = (key) =>
     (v) => (config = key ? v.default[key] : v.default)
   );
 
-const build = () => {
-  //...
-};
-
 let cache = {
   fragments: {},
   templates: {},
 };
 
-const cacheFragment = (filename, fc) =>
-  fs.promises.readFile(filename, 'utf8').then((content) => {
-    cache.fragments[filename] = fc.map({ filename, content });
+const cacheFragment = (filename, fc) => {
+  fc.cache = fc.cache || {};
+  return fs.promises.readFile(filename, 'utf8').then((content) => {
+    fc.cache[basename(filename)] = { filename, content };
   });
+};
+
+const cacheTemplate = (filename, fc) => {
+  fc.cache = fc.cache || {};
+  fs.promises.readFile(filename, 'utf8').then((content) => {
+    fc.cache[basename(filename)] = { filename, content };
+  });
+};
+
+/*
+
+@TODO: modify schema so that template config uses { input } as well...
+
+*/
 
 const initialiseFragments = (fc) =>
   glob(fc.input).then((files) =>
     Promise.all(files.map((file) => cacheFragment(file, fc)))
+  );
+
+const initialiseTemplates = (fc) =>
+  glob(fc.templates).then((files) =>
+    Promise.all(files.map((file) => cacheTemplate(file, fc)))
   );
 
 const watchFragments = (fc) => {
@@ -48,54 +59,66 @@ const watchFragments = (fc) => {
     .on('change', (filename) => cacheFragment(filename, fc).then(build));
 };
 
-const cacheTemplate = (filename) =>
-  fs.promises.readFile(filename, 'utf8').then((content) => {
-    cache.templates[filename] = content;
-  });
-
-const initialiseTemplates = () =>
-  glob(config.templates).then((files) =>
-    Promise.all(files.map((file) => cacheTemplate(file)))
-  );
-
-const watchTemplates = () => {
+const watchTemplates = (fc) => {
   chokidar
     .watch(config.templates)
     .on('change', (filename) => cacheTemplate(filename).then(build));
 };
 
 const initialise = () => {
-  /*
-  
-  initialising all of the templates and fragments makes them available in the global scope via cache.
-
-  now we should be able to build each template
-
-  each template
-
-    run filter to get list of fragments
-
-    run reduce to merge the two together 
-
-    save || serve
-  
-  */
-
   return Promise.all([
-    initialiseTemplates(),
+    initialiseTemplates(config),
     ...config.fragments.map(initialiseFragments),
   ]);
-
-  /*
-  
-  .then(() => Promise.all([
-    watchTemplates(),
-    ...config.fragments.map(watchFragments)
-  ]));
-  
-  */
 };
 
-configure()
-  .then(initialise)
-  .then(() => console.log(JSON.stringify(cache, null, 2)));
+const pageCache = {};
+
+const build = () => {
+  let templates = config.cache;
+  let fragmentConfigs = config.fragments;
+
+  Object.values(templates).map((template) => {
+    let { filename, content } = template;
+    let tpl = fragmentConfigs.reduce((tpl, fc) => {
+      let { map = IDENTITY, filter = IDENTITY, reduce = IDENTITY, cache } = fc;
+      let fragments = filter(Object.values(cache), tpl).map(map);
+      return reduce(tpl, fragments);
+    }, content);
+
+    pageCache[basename(filename)] = tpl;
+
+    //save?
+  });
+};
+
+const serve = () => {
+  const app = express();
+  const staticPath = './';
+
+  app.use(express.static(staticPath));
+  app.use(function (req, res, next) {
+    let name = req.originalUrl.split('?')[0];
+    name = name === '/' ? 'index' : name.slice(1);
+
+    let entry = pageCache[name];
+
+    if (entry) {
+      res.send(entry);
+    } else {
+      next();
+    }
+  });
+
+  app.listen(config.port, () =>
+    console.log(`dev server listening on port ${config.port}`)
+  );
+
+  chokidar
+    .watch([config.templates, ...config.fragments.map(({ input }) => input)])
+    .on('change', build)
+    .on('add', build)
+    .on('unlink', build);
+};
+
+configure().then(initialise).then(build).then(serve);
