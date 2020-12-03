@@ -82,7 +82,7 @@ const build = () => {
     let { filename, content } = template;
     let tpl = fragmentConfigs.reduce((tpl, fc) => {
       let { map = IDENTITY, filter = IDENTITY, reduce = IDENTITY, cache } = fc;
-      let fragments = filter(Object.values(cache), tpl).map(map);
+      let fragments = filter(Object.values(cache), template).map(map);
       return reduce(tpl, fragments);
     }, content);
 
@@ -100,6 +100,8 @@ const serve = () => {
   app.use(function (req, res, next) {
     let name = req.originalUrl.split('?')[0];
     name = name === '/' ? 'index' : name.slice(1);
+
+    console.log('REQUEST', name);
 
     let entry = pageCache[name];
 
@@ -121,4 +123,21 @@ const serve = () => {
     .on('unlink', build);
 };
 
-configure().then(initialise).then(build).then(serve);
+const dev = () => {
+  initialise().then(build).then(serve);
+};
+
+const [cmd, key] = process.argv.slice(2);
+
+switch (cmd) {
+  case 'dev':
+    configure(key).then(dev);
+    break;
+  case 'build':
+    configure(key).then(build);
+    break;
+  default:
+    console.error(
+      `mosaic command expects either "dev" or "build" as the first and only argument`
+    );
+}
