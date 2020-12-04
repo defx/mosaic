@@ -18,7 +18,6 @@ const configure = (key, mode) =>
     let target = key ? v.default[key] : v.default;
     target = target[mode] || target;
     config = target;
-    //(config = key ? v.default[key] : v.default)
   });
 
 let cache = {
@@ -39,12 +38,6 @@ const cacheTemplate = (filename, fc) => {
     fc.cache[basename(filename)] = { filename, content };
   });
 };
-
-/*
-
-@TODO: modify schema so that template config uses { input } as well...
-
-*/
 
 const initialiseFragments = (fc) =>
   glob(fc.input).then((files) =>
@@ -105,8 +98,6 @@ const serve = () => {
     let name = req.originalUrl.split('?')[0];
     name = name === '/' ? 'index' : name.slice(1);
 
-    console.log('REQUEST', name);
-
     let entry = pageCache[name];
 
     if (entry) {
@@ -132,12 +123,11 @@ const ensureOutputDir = () =>
     .stat(config.outputDir)
     .catch(() => fs.promises.mkdir(config.outputDir));
 
-const save = () => {
+const save = () =>
   Object.values(pageCache).map(({ filename, content }) => {
     let filepath = path.join(config.outputDir, path.basename(filename));
     return fs.promises.writeFile(filepath, content);
   });
-};
 
 const dev = () => initialise().then(compile).then(serve);
 
@@ -154,6 +144,6 @@ switch (cmd) {
     break;
   default:
     console.error(
-      `mosaic command expects either "dev" or "build" as the first and only argument`
+      `mosaic command expects either "dev" or "build" as the first argument`
     );
 }
