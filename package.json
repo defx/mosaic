@@ -1,7 +1,7 @@
 {
-  "name": "@defx/mosaic",
+  "name": "mosaic",
   "type": "module",
-  "version": "0.2.0",
+  "version": "1.0.0",
   "description": "Mosaic is a node command line utility made primarily for transforming and combining HTML assets.",
   "main": "index.js",
   "repository": {
