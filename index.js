@@ -1,5 +1,3 @@
-#!/usr/bin/env node
-
 import chokidar from 'chokidar';
 import deepmerge from 'deepmerge';
 import express from 'express';
