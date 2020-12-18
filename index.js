@@ -7,18 +7,10 @@ import fs from 'fs';
 import glob from 'glob-promise';
 import path from 'path';
 
-const CWD = process.env.INIT_CWD || process.env.PWD;
 const basename = (v) => path.basename(v, path.extname(v));
 const IDENTITY = (v) => v;
 
 let config = {};
-
-const configure = (key, mode) =>
-  import(path.join(CWD, './mosaic.config.js')).then((v) => {
-    let target = key ? v.default[key] : v.default;
-    target = target[mode] || target;
-    config = target;
-  });
 
 let cache = {
   fragments: {},
@@ -61,12 +53,11 @@ const watchTemplates = (fc) => {
     .on('change', (filename) => cacheTemplate(filename).then(build));
 };
 
-const initialise = () => {
-  return Promise.all([
+const initialise = () =>
+  Promise.all([
     initialiseTemplates(config),
     ...config.fragments.map(initialiseFragments),
   ]);
-};
 
 const pageCache = {};
 
@@ -93,6 +84,8 @@ const serve = () => {
   const app = express();
   const staticPath = './';
 
+  app.get('/health', (req, res) => res.send('ok'));
+
   app.use(express.static(staticPath));
   app.use(function (req, res, next) {
     let name = req.originalUrl.split('?')[0];
@@ -107,43 +100,41 @@ const serve = () => {
     }
   });
 
-  app.listen(config.port, () =>
-    console.log(`dev server listening on port ${config.port}`)
-  );
+  return new Promise((resolve) => {
+    app.listen(config.port, () => {
+      console.log(`dev server listening on port ${config.port}`);
+      resolve();
+    });
 
-  chokidar
-    .watch([config.templates, ...config.fragments.map(({ input }) => input)])
-    .on('change', compile)
-    .on('add', compile)
-    .on('unlink', compile);
+    chokidar
+      .watch([config.templates, ...config.fragments.map(({ input }) => input)])
+      .on('change', compile)
+      .on('add', compile)
+      .on('unlink', compile);
+  });
 };
 
-const ensureOutputDir = () =>
-  fs.promises
-    .stat(config.outputDir)
-    .catch(() => fs.promises.mkdir(config.outputDir));
+const ensureDir = (filepath, dir = path.dirname(filepath)) =>
+  fs.promises.stat(dir).catch(() => fs.promises.mkdir(dir));
 
 const save = () =>
   Object.values(pageCache).map(({ filename, content }) => {
-    let filepath = path.join(config.outputDir, path.basename(filename));
-    return fs.promises.writeFile(filepath, content);
+    //@TODO: accept string or function
+    let filepath = (config.output || IDENTITY)(filename);
+    return ensureDir(filepath).then(() =>
+      fs.promises.writeFile(filepath, content)
+    );
   });
 
-const dev = () => initialise().then(compile).then(serve);
-
-const build = () => initialise().then(ensureOutputDir).then(compile).then(save);
-
-const [cmd, key] = process.argv.slice(2);
-
-switch (cmd) {
-  case 'dev':
-    configure(key, 'dev').then(dev);
-    break;
-  case 'build':
-    configure(key, 'build').then(build);
-    break;
-  default:
-    console.error(
-      `mosaic command expects either "dev" or "build" as the first argument`
-    );
+function mosaic(c) {
+  config = c;
+  return initialise()
+    .then(compile)
+    .then(() => {
+      if (c.port) {
+        return serve(); //@TODO if(c.watch)
+      } else if (c.output) return save();
+    });
 }
+
+export default mosaic;
