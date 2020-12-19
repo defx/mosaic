@@ -82,7 +82,7 @@ const serve = () => {
   const app = express();
 
   if (config.staticDir) {
-    app.use(express.static(staticDir));
+    app.use(express.static(config.staticDir));
   }
 
   app.get('/health', (req, res) => res.send('ok'));
