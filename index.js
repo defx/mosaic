@@ -80,11 +80,13 @@ const compile = () => {
 
 const serve = () => {
   const app = express();
-  const staticPath = './';
+
+  if (config.staticDir) {
+    app.use(express.static(staticDir));
+  }
 
   app.get('/health', (req, res) => res.send('ok'));
 
-  app.use(express.static(staticPath));
   app.use(function (req, res, next) {
     let name = req.originalUrl.split('?')[0];
     name = name === '/' ? 'index' : name.slice(1);
@@ -104,25 +106,36 @@ const serve = () => {
       resolve();
     });
 
-    chokidar
-      .watch([config.templates, ...config.fragments.map(({ input }) => input)])
-      .on('change', compile)
-      .on('add', compile)
-      .on('unlink', compile);
+    // chokidar
+    //   .watch([config.templates, ...config.fragments.map(({ input }) => input)])
+    //   .on('change', compile)
+    //   .on('add', compile)
+    //   .on('unlink', compile);
   });
 };
 
 const ensureDir = (filepath, dir = path.dirname(filepath)) =>
   fs.promises.stat(dir).catch(() => fs.promises.mkdir(dir));
 
-const save = () =>
-  Object.values(pageCache).map(({ filename, content }) => {
-    //@TODO: accept string or function
-    let filepath = (config.output || IDENTITY)(filename);
-    return ensureDir(filepath).then(() =>
-      fs.promises.writeFile(filepath, content)
-    );
-  });
+const save = () => {
+  let dir = config.output.dir;
+
+  //@TODO: clean?
+
+  return ensureDir(dir).then(() =>
+    Object.values(pageCache).map(({ filename, content }) => {
+      let f = config.output.filename || filename;
+
+      if (typeof f === 'function') {
+        f = f(filename);
+      }
+
+      let filepath = path.join(dir, path.basename(f));
+
+      return fs.promises.writeFile(filepath, content);
+    })
+  );
+};
 
 function mosaic(c) {
   config = c;
