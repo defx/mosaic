@@ -1,10 +1,11 @@
 # mosaic
 
-Mosaic is a node module made primarily for transforming and combining HTML assets.
+Mosaic is a node module made primarily for transforming and
+combining HTML assets. You can use it for things like
+creating dev/test servers and build pipelines.
 
-Configuration allows developers to write custom tasks that they want to perform when bundling files together.
-
-Mosaic also provides a dev server that can be used as an HTTP server for serving and rebuilding files automatically while developing.
+Configuration allows developers to write custom tasks that
+they want to perform when bundling files together.
 
 ## Install
 
