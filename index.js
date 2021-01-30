@@ -1,15 +1,16 @@
 import chokidar from 'chokidar';
 import express from 'express';
-import fs from 'fs';
+import fs from 'fs-extra';
 import glob from 'glob-promise';
 import path from 'path';
 
 const mosaic = (config) => {
   let app, routes;
 
-  if (config.port) {
+  if (config.serve) {
+    let { port = 3000, staticPath = './' } = config.serve;
     app = new express();
-    app.use(express.static('./'));
+    app.use(express.static(staticPath));
     app.use(function (req, res, next) {
       let k = req.originalUrl.split('?')[0];
       if (k in routes) {
@@ -18,8 +19,8 @@ const mosaic = (config) => {
         next();
       }
     });
-    app.listen(config.port, () =>
-      console.log(`app listening on port ${config.port}`)
+    app.listen(port, () =>
+      console.log(`app listening on port ${port}`)
     );
   }
 
@@ -30,13 +31,6 @@ const mosaic = (config) => {
       */
   };
 
-  /*
-      transform cache into object expected by config...
-
-      - remove cache keys so that input name maps to array of objects
-      - if the input path wasn't a glob, then flatten
-
-      */
   const getCacheValues = () =>
     Object.keys(cache).reduce((a, k) => {
       let isGlob = config.input[k].includes('*');
@@ -47,24 +41,31 @@ const mosaic = (config) => {
 
   const update = () => {
     let values = getCacheValues();
+    let { transform = [] } = config;
 
-    let output = config.output.reduce(
+    let transformResult = transform.reduce(
       (output, fn) => fn(output),
       values
     );
-    if (config.port) {
-      //@TODO: serve
-      routes = output.routes;
-      return Promise.resolve();
-    } else {
-      //save
 
-      //@TODO ensure directories exist
+    if (config.serve) {
+      let { mapRoutes = () => ({}) } = config.serve;
+      routes = mapRoutes(transformResult);
+      return Promise.resolve();
+    }
+
+    if (config.output) {
+      let { map = (v = v) } = config.output;
+      let output = map(transformResult);
 
       return Promise.all(
-        output.map(({ filepath, content }) =>
-          fs.promises.writeFile(filepath, content)
-        )
+        output.map(({ filepath, content }) => {
+          return fs
+            .ensureDir(path.dirname(filepath))
+            .then(() =>
+              fs.promises.writeFile(filepath, content)
+            );
+        })
       );
     }
   };
@@ -79,13 +80,11 @@ const mosaic = (config) => {
   const populateCache = () =>
     Promise.all(
       Object.entries(config.input).map(
-        ([type, globPath]) => {
-          cache[type] = {};
+        ([key, globPath]) => {
+          cache[key] = {};
           return glob(globPath).then((paths) =>
             Promise.all(
-              paths.map((filepath) =>
-                updateCache(type, filepath)
-              )
+              paths.map((f) => updateCache(key, f))
             )
           );
         }
