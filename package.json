@@ -17,12 +17,12 @@
   "homepage": "https://github.com/defx/mosaic#readme",
   "dependencies": {
     "chokidar": "^3.4.3",
-    "deepmerge": "^4.2.2",
     "express": "^4.17.1",
     "fs": "0.0.1-security",
     "fs-extra": "^9.1.0",
     "glob": "^7.1.6",
     "glob-promise": "^3.4.0",
+    "lodash.debounce": "^4.0.8",
     "path": "^0.12.7"
   },
   "bin": {

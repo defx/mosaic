@@ -3,6 +3,7 @@ import express from 'express';
 import fs from 'fs-extra';
 import glob from 'glob-promise';
 import path from 'path';
+import debounce from 'lodash.debounce';
 
 const mosaic = (config) => {
   let app, routes;
@@ -91,12 +92,32 @@ const mosaic = (config) => {
       )
     );
 
-  return populateCache().then(update);
-  //   .then(() => {
-  //     if (config.watch) {
-  //       //@TODO: chokidar to watch -> update
-  //     }
-  //   });
+  const scheduleUpdate = debounce(update);
+
+  /*
+  
+  @TODO: hot reload 
+  
+  */
+
+  return populateCache()
+    .then(update)
+    .then(() => {
+      if (config.watch) {
+        Object.entries(config.input).forEach(
+          ([key, glob]) => {
+            chokidar
+              .watch(glob)
+              .on('change', (filepath) => {
+                console.log('change', filepath);
+                updateCache(key, filepath);
+                scheduleUpdate();
+              });
+          }
+        );
+        //@TODO: on('unlink').on('add')
+      }
+    });
 };
 
 export default mosaic;
