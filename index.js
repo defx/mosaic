@@ -4,9 +4,32 @@ import fs from 'fs-extra';
 import glob from 'glob-promise';
 import path from 'path';
 import debounce from 'lodash.debounce';
+import WebSocket from 'ws';
+
+function injectHotReloadScript(v, port) {
+  return typeof v === 'string'
+    ? v.replace(
+        '</body>',
+        `
+  <script>new WebSocket("ws://localhost:80").addEventListener("message", event => {
+    if (event.data === "reload") window.location.reload();
+  })</script>
+  `
+      )
+    : v;
+}
 
 const mosaic = (config) => {
-  let app, routes;
+  let app, routes, socket;
+
+  const hotReload = config.serve && config.watch;
+
+  if (hotReload) {
+    const wss = new WebSocket.Server({ port: 80 });
+    wss.on('connection', (s) => {
+      socket = s;
+    });
+  }
 
   if (config.serve) {
     let { port = 3000, staticPath = './' } = config.serve;
@@ -15,13 +38,21 @@ const mosaic = (config) => {
     app.use(function (req, res, next) {
       let k = req.originalUrl.split('?')[0];
       if (k in routes) {
-        res.send(routes[k]);
+        let payload = routes[k];
+
+        if (hotReload) {
+          payload = injectHotReloadScript(payload);
+        }
+
+        res.send(payload);
       } else {
         next();
       }
     });
     app.listen(port, () =>
-      console.log(`app listening on port ${port}`)
+      console.log(
+        `Express server listening on port ${port}`
+      )
     );
   }
 
@@ -52,7 +83,7 @@ const mosaic = (config) => {
     if (config.serve) {
       let { mapRoutes = () => ({}) } = config.serve;
       routes = mapRoutes(transformResult);
-      return Promise.resolve();
+      if (hotReload && socket) socket.send('reload');
     }
 
     if (config.output) {
@@ -68,6 +99,8 @@ const mosaic = (config) => {
             );
         })
       );
+    } else {
+      return Promise.resolve();
     }
   };
 
@@ -94,12 +127,6 @@ const mosaic = (config) => {
 
   const scheduleUpdate = debounce(update);
 
-  /*
-  
-  @TODO: hot reload 
-  
-  */
-
   return populateCache()
     .then(update)
     .then(() => {
@@ -109,9 +136,9 @@ const mosaic = (config) => {
             chokidar
               .watch(glob)
               .on('change', (filepath) => {
-                console.log('change', filepath);
-                updateCache(key, filepath);
-                scheduleUpdate();
+                updateCache(key, filepath).then(
+                  scheduleUpdate
+                );
               });
           }
         );

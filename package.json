@@ -23,7 +23,8 @@
     "glob": "^7.1.6",
     "glob-promise": "^3.4.0",
     "lodash.debounce": "^4.0.8",
-    "path": "^0.12.7"
+    "path": "^0.12.7",
+    "ws": "^7.4.2"
   },
   "bin": {
     "mosaic": "cli.js"
