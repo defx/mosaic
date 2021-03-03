@@ -49,19 +49,10 @@ const mosaic = (config) => {
         next();
       }
     });
-    app.listen(port, () =>
-      console.log(
-        `Express server listening on port ${port}`
-      )
-    );
+    app.listen(port, () => console.log(`Express server listening on port ${port}`));
   }
 
-  const cache = {
-    /*
-        [mdContent]: [{ filepath, content }, { filepath, content }],
-        [template]: [{ filepath, content }]
-      */
-  };
+  const cache = {};
 
   const getCacheValues = () =>
     Object.keys(cache).reduce((a, k) => {
@@ -75,10 +66,7 @@ const mosaic = (config) => {
     let values = getCacheValues();
     let { transform = [] } = config;
 
-    let transformResult = transform.reduce(
-      (output, fn) => fn(output),
-      values
-    );
+    let transformResult = transform.reduce((output, fn) => fn(output), values);
 
     if (config.serve) {
       let { mapRoutes = () => ({}) } = config.serve;
@@ -94,9 +82,7 @@ const mosaic = (config) => {
         output.map(({ filepath, content }) => {
           return fs
             .ensureDir(path.dirname(filepath))
-            .then(() =>
-              fs.promises.writeFile(filepath, content)
-            );
+            .then(() => fs.promises.writeFile(filepath, content));
         })
       );
     } else {
@@ -105,24 +91,16 @@ const mosaic = (config) => {
   };
 
   const updateCache = (key, filepath) =>
-    fs.promises
-      .readFile(filepath, 'utf8')
-      .then((content) => {
-        cache[key][filepath] = { content, filepath };
-      });
+    fs.promises.readFile(filepath, 'utf8').then((content) => {
+      cache[key][filepath] = { content, filepath };
+    });
 
   const populateCache = () =>
     Promise.all(
-      Object.entries(config.input).map(
-        ([key, globPath]) => {
-          cache[key] = {};
-          return glob(globPath).then((paths) =>
-            Promise.all(
-              paths.map((f) => updateCache(key, f))
-            )
-          );
-        }
-      )
+      Object.entries(config.input).map(([key, globPath]) => {
+        cache[key] = {};
+        return glob(globPath).then((paths) => Promise.all(paths.map((f) => updateCache(key, f))));
+      })
     );
 
   const scheduleUpdate = debounce(update);
@@ -131,18 +109,12 @@ const mosaic = (config) => {
     .then(update)
     .then(() => {
       if (config.watch) {
-        Object.entries(config.input).forEach(
-          ([key, glob]) => {
-            chokidar
-              .watch(glob)
-              .on('change', (filepath) => {
-                updateCache(key, filepath).then(
-                  scheduleUpdate
-                );
-              });
-          }
-        );
-        //@TODO: on('unlink').on('add')
+        Object.entries(config.input).forEach(([key, glob]) => {
+          chokidar.watch(glob).on('change', (filepath) => {
+            updateCache(key, filepath).then(scheduleUpdate);
+          });
+        });
+        //@todo: handle unlink, add
       }
     });
 };

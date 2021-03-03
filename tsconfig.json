@@ -1,0 +1,11 @@
+{
+  "compilerOptions": {
+    "allowJs": true,
+    "declaration": true,
+    "emitDeclarationOnly": true
+  },
+  "files": ["index.js"],
+  "typedocOptions": {
+    "entryPoints": ["index.js"]
+  }
+}
