@@ -100,7 +100,9 @@ const mosaic = (config) => {
     Promise.all(
       Object.entries(config.input).map(([key, globPath]) => {
         cache[key] = {};
-        return glob(globPath).then((paths) => Promise.all(paths.map((f) => updateCache(key, f))));
+        return glob(globPath).then((paths) =>
+          Promise.all(paths.map((f) => updateCache(key, path.normalize(f))))
+        );
       })
     );
 
