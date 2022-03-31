@@ -1,36 +1,53 @@
 {
   "name": "mosaic",
-  "type": "module",
-  "version": "1.0.3",
-  "description": "Mosaic is a node command line utility made primarily for transforming and combining HTML assets.",
-  "main": "index.js",
+  "version": "1.0.4",
+  "description": "The Web UI Framework",
+  "main": "dist/mosaic.min.js",
+  "browser": "dist/mosaic.min.js",
+  "unpkg": "dist/mosaic.min.js",
+  "module": "src/index.js",
+  "types": "types/index.d.ts",
+  "files": [
+    "src",
+    "dist",
+    "cjs"
+  ],
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "mocha-express --coverage",
+    "test:watch": "mocha-express --watch",
+    "build": "rm -rf dist && rollup -c && npm run size",
+    "size": "gzip -c9 ./dist/mosaic.min.js | wc -c",
+    "coveralls": "cat ./coverage/lcov-report/lcov.info | coveralls",
+    "prepublishOnly": "npm t && npm run build",
+    "release": "npm t && standard-version"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/defx/mosaic.git"
   },
-  "keywords": [],
-  "author": "defx",
-  "license": "ISC",
+  "keywords": [
+    "simple",
+    "declarative",
+    "dom",
+    "ui",
+    "user interface",
+    "web components",
+    "framework"
+  ],
+  "author": "Matt Donkin",
+  "license": "MIT",
   "bugs": {
     "url": "https://github.com/defx/mosaic/issues"
   },
-  "homepage": "https://github.com/defx/mosaic#readme",
-  "dependencies": {
-    "chokidar": "^3.4.3",
-    "express": "^4.17.1",
-    "fs": "0.0.1-security",
-    "fs-extra": "^9.1.0",
-    "glob": "^7.1.6",
-    "glob-promise": "^3.4.0",
-    "lodash.debounce": "^4.0.8",
-    "path": "^0.12.7",
-    "ws": "^7.4.2"
-  },
-  "bin": {
-    "mosaic": "cli.js"
-  },
-  "devDependencies": {},
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+  "homepage": "https://github.com/defx/mosaic",
+  "devDependencies": {
+    "coveralls": "^3.1.0",
+    "mocha-express": "^0.1.2",
+    "rollup": "^2.26.4",
+    "rollup-plugin-terser": "^7.0.1",
+    "standard-version": "^9.1.1"
   }
 }
