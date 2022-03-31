@@ -8,33 +8,6 @@ import {
   pascalToKebab,
 } from "./helpers.js"
 
-function getDataScript(node) {
-  return node.querySelector(`script[type="application/mosaic"]`)
-}
-
-function createDataScript(node) {
-  let ds = document.createElement("script")
-  ds.setAttribute("type", "application/mosaic")
-  node.append(ds)
-  return ds
-}
-
-function serialise(node, state) {
-  let ds = getDataScript(node) || createDataScript(node)
-
-  ds.innerText = JSON.stringify(state)
-}
-
-function deserialise(node) {
-  return JSON.parse(getDataScript(node)?.innerText || "{}")
-}
-
-let count = 0
-
-function nextId() {
-  return count++
-}
-
 export const define = (name, factory, template) =>
   customElements.define(
     name,
@@ -42,18 +15,10 @@ export const define = (name, factory, template) =>
       async connectedCallback() {
         if (!this.initialised) {
           let config = factory(this)
-          const slice = `name.${nextId()}`
 
           if (config instanceof Promise) config = await config
 
-          let {
-            update,
-            middleware,
-            derivations,
-            subscribe,
-            shadow,
-            initialState = {},
-          } = config
+          let { subscribe, shadow, initialState = {} } = config
 
           this.connectedCallback = config.connectedCallback
           this.disconnectedCallback = config.disconnectedCallback
@@ -62,11 +27,6 @@ export const define = (name, factory, template) =>
             config,
             this
           )
-
-          dispatch({
-            type: "MERGE",
-            payload: deserialise(this),
-          })
 
           initialState = getState()
 
@@ -135,8 +95,6 @@ export const define = (name, factory, template) =>
               { getState, dispatch },
               template,
               () => {
-                serialise(this, getState())
-
                 observedProps.forEach((k) => {
                   let v = getState()[k]
                   if (isPrimitive(v)) applyAttribute(this, k.slice(1), v)

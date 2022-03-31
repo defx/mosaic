@@ -12,8 +12,6 @@ import { getParts, getValueFromParts, hasMustache } from "./token.js"
 import { applyAttribute } from "./attribute.js"
 import { createContext } from "./context.js"
 
-const HYDRATE_ATTR = "mosaic-hydrate"
-
 export const render = (
   target,
   { getState, dispatch },
@@ -382,16 +380,11 @@ export const render = (
 
   let frag = fragmentFromTemplate(template)
   let map = parse(frag)
-  let hydrate = target.hasAttribute?.(HYDRATE_ATTR)
-  if (hydrate) {
-    walk(target, bindAll(map, 1))
-  } else {
-    walk(frag, bindAll(map))
-    beforeMountCallback?.(frag)
-    target.prepend(frag)
-    update()
-    target.setAttribute?.(HYDRATE_ATTR, 1)
-  }
+
+  walk(frag, bindAll(map))
+  beforeMountCallback?.(frag)
+  target.prepend(frag)
+  update()
 
   return debounce(() => update(updatedCallback))
 }
