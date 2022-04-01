@@ -1,6 +1,6 @@
 import { define } from "../src/index.js"
 
-describe("interpolation", () => {
+describe("interpolations", () => {
   it("should always cast primitive values to strings, unless null or undefined", () => {
     let name = createName()
 
@@ -131,15 +131,16 @@ describe("interpolation", () => {
       name,
       () => ({
         initialState: {
-          $foo: `
+          foo: `
           background-color: gold;
           color: tomato;
           width: 100px;
           height: 100px;
           `,
         },
+        observe: ["foo"],
       }),
-      html` <section :style="{{ $foo }}"></section> `
+      html` <section :style="{{ foo }}"></section> `
     )
 
     mount(html`<${name}></${name}>`)
@@ -244,9 +245,10 @@ describe("interpolation", () => {
     define(
       name,
       () => ({
-        initialState: { $foo: true },
+        initialState: { foo: true },
+        observe: ["foo"],
       }),
-      html` <p :hidden="{{ !$foo }}">boo!</p>`
+      html` <p :hidden="{{ !foo }}">boo!</p>`
     )
 
     mount(html`<${name} foo></${name}>`)

@@ -29,14 +29,11 @@ describe("define", () => {
     let name = createName()
 
     let template = document.createElement("template")
-    template.innerHTML = "<p>{{ $title }}</p>"
+    template.innerHTML = "<p>{{ title }}</p>"
     define(
       name,
       () => ({
-        update: {},
-        initialState: {
-          $title: "",
-        },
+        observe: ["title"],
       }),
       template
     )
@@ -49,11 +46,7 @@ describe("define", () => {
 
   it("reflects attribute changes on to viewmodel", async () => {
     let name = createName()
-    define(
-      name,
-      () => ({ initialState: { $title: "" } }),
-      "<p>{{ $title }}</p>"
-    )
+    define(name, () => ({ observe: ["title"] }), "<p>{{ title }}</p>")
     mount(`
       <${name} title="ok!"></${name}>
       `)
@@ -134,16 +127,17 @@ describe("define", () => {
     let name = createName()
 
     let initialState = {
-      $fooBar: false,
+      fooBar: false,
     }
 
     define(
       name,
       () => ({
         update: {
-          toggle: (state) => ({ ...state, $fooBar: !state.$fooBar }),
+          toggle: (state) => ({ ...state, fooBar: !state.fooBar }),
         },
         initialState,
+        observe: ["fooBar"],
       }),
       html`<button :onclick="toggle">ok</button>`
     )
@@ -163,19 +157,22 @@ describe("define", () => {
     let name = createName()
 
     let initialState = {
-      $ariaHidden: true,
+      ariaHidden: true,
     }
 
     define(
       name,
       () => ({
         update: {
-          toggle: (state) => ({
-            ...state,
-            $ariaHidden: !state.$ariaHidden,
-          }),
+          toggle: (state) => {
+            return {
+              ...state,
+              ariaHidden: !state.ariaHidden,
+            }
+          },
         },
         initialState,
+        observe: ["aria-hidden"],
       }),
       html`<button :onclick="toggle">ok</button>`
     )
@@ -281,7 +278,7 @@ describe("define", () => {
     let name = createName()
 
     let initialState = {
-      $foo: "",
+      foo: "",
     }
 
     define(
@@ -290,12 +287,13 @@ describe("define", () => {
         update: {
           updateFoo: (state) => ({
             ...state,
-            $foo: "baz",
+            foo: "baz",
           }),
         },
         initialState,
+        observe: ["foo"],
       }),
-      html` <p :onclick="updateFoo" foo="bar">{{ $foo }}</p> `
+      html` <p :onclick="updateFoo" foo="bar">{{ foo }}</p> `
     )
 
     mount(`<${name}></${name}>`)

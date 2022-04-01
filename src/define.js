@@ -6,6 +6,7 @@ import {
   attributeToProp,
   isPrimitive,
   pascalToKebab,
+  kebabToPascal,
 } from "./helpers.js"
 
 export const define = (name, factory, template) =>
@@ -18,7 +19,7 @@ export const define = (name, factory, template) =>
 
           if (config instanceof Promise) config = await config
 
-          let { subscribe, shadow, initialState = {} } = config
+          let { subscribe, shadow, initialState = {}, observe = [] } = config
 
           this.connectedCallback = config.connectedCallback
           this.disconnectedCallback = config.disconnectedCallback
@@ -30,13 +31,9 @@ export const define = (name, factory, template) =>
 
           initialState = getState()
 
-          let observedProps = Object.keys(initialState).filter(
-            (v) => v.charAt(0) === "$"
-          )
+          observe = observe.map(kebabToPascal)
 
-          let observedAttributes = observedProps
-            .map((v) => v.slice(1))
-            .map(pascalToKebab)
+          let observedAttributes = observe.map(pascalToKebab)
 
           let sa = this.setAttribute
           this.setAttribute = (k, v) => {
@@ -44,7 +41,7 @@ export const define = (name, factory, template) =>
               let { name, value } = attributeToProp(k, v)
               dispatch({
                 type: "SET",
-                payload: { name: "$" + name, value },
+                payload: { name, value },
               })
             }
             sa.apply(this, [k, v])
@@ -52,23 +49,22 @@ export const define = (name, factory, template) =>
 
           observedAttributes.forEach((name) => {
             let property = attributeToProp(name).name
-
             let value
 
             if (this.hasAttribute(name)) {
               value = this.getAttribute(name)
             } else {
-              value = this[property] || initialState["$" + property]
+              value = this[property] || initialState[property]
             }
 
             Object.defineProperty(this, property, {
               get() {
-                return getState()["$" + property]
+                return getState()[property]
               },
               set(v) {
                 dispatch({
                   type: "SET",
-                  payload: { name: "$" + property, value: v },
+                  payload: { name: property, value: v },
                 })
                 if (isPrimitive(v)) {
                   applyAttribute(this, property, v)
@@ -95,9 +91,9 @@ export const define = (name, factory, template) =>
               { getState, dispatch },
               template,
               () => {
-                observedProps.forEach((k) => {
+                observe.forEach((k) => {
                   let v = getState()[k]
-                  if (isPrimitive(v)) applyAttribute(this, k.slice(1), v)
+                  if (isPrimitive(v)) applyAttribute(this, k, v)
                 })
                 subscribe?.(getState())
                 flush()

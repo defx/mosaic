@@ -135,7 +135,7 @@ describe("iterations", () => {
       name,
       () => ({
         initialState: {
-          $colours: [
+          colours: [
             {
               name: "red",
               foo: 1,
@@ -150,9 +150,10 @@ describe("iterations", () => {
             },
           ],
         },
+        observe: ["colours"],
       }),
       html`
-        <template each="colour in $colours" key="foo">
+        <template each="colour in colours" key="foo">
           <p>{{colour.name}}</p>
         </template>
       `
@@ -423,38 +424,5 @@ describe("iterations", () => {
       assert.equal(box.width, width)
       assert.equal(box.height, height)
     })
-  })
-
-  it("should render two lists", () => {
-    let name = createName()
-
-    define(
-      name,
-      () => ({
-        initialState: {
-          $colours1: ["gold", "tomato"],
-          $colours2: ["green", "orange"],
-        },
-      }),
-      html`
-        <ul>
-          <li each="(index, colour) in $colours1" :data-index="{{ index }}">
-            <p>{{ index }}</p>
-            <p>{{ colour }}</p>
-          </li>
-          <li each="(index, colour) in $colours2" :data-index="{{ index }}">
-            <p>{{ index }}</p>
-            <p>{{ colour }}</p>
-          </li>
-        </ul>
-      `
-    )
-
-    mount(html`<${name}></${name}>`)
-
-    $(name).colours1.push("black")
-    $(name).colours2.unshift("white")
-
-    // @TODO
   })
 })

@@ -190,17 +190,18 @@ describe("user input", () => {
     let name = createName()
 
     let initialState = {
-      $pets: "hamster",
+      pets: "hamster",
     }
 
     define(
       name,
       () => ({
         initialState,
+        observe: ["pets"],
       }),
       html`
         <label for="pet-select">Choose a pet:</label>
-        <select :name="$pets" id="pet-select">
+        <select :name="pets" id="pet-select">
           <option value="">--Please choose an option--</option>
           <option value="dog">Dog</option>
           <option value="cat">Cat</option>
@@ -227,7 +228,7 @@ describe("user input", () => {
     let name = createName()
 
     let initialState = {
-      $pets: "Hamster",
+      pets: "Hamster",
       options: ["Dog", "Cat", "Hamster", "Parrot", "Spider", "Goldfish"],
     }
 
@@ -235,10 +236,11 @@ describe("user input", () => {
       name,
       () => ({
         initialState,
+        observe: ["pets"],
       }),
       html`
         <label for="pet-select">Choose a pet:</label>
-        <select :name="$pets" id="pet-select">
+        <select :name="pets" id="pet-select">
           <option value="">--Please choose an option--</option>
           <option each="option in options" :value="option">{{ option }}</option>
         </select>
@@ -297,12 +299,13 @@ describe("user input", () => {
       name,
       () => ({
         initialState: {
-          $pets: ["hamster"],
+          pets: ["hamster"],
         },
+        observe: ["pets"],
       }),
       html`
         <label for="pet-select">Choose a pet:</label>
-        <select :name="$pets" id="pet-select" multiple>
+        <select :name="pets" id="pet-select" multiple>
           <option value="">--Please choose an option--</option>
           <option value="dog">Dog</option>
           <option value="cat">Cat</option>
