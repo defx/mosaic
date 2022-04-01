@@ -65,6 +65,16 @@ export function configure(
 
   function dispatch(action) {
     const { type } = action
+
+    if (type.startsWith("$") && !(type in update)) {
+      node.dispatchEvent(
+        new CustomEvent(type, {
+          detail: action,
+          bubbles: true,
+        })
+      )
+    }
+
     if (type === "SET" || type === "MERGE") {
       updateState(systemReducer(getState(), action))
     } else {

@@ -100,12 +100,6 @@ export const render = (
       { node, eventType, actionType, context },
       { dispatch, getState }
     ) => {
-      /* 
-      
-      NB that context is only passed for local actions not prefixed with "$"
-
-      */
-
       node.addEventListener(eventType, (event) => {
         let action = {
           type: actionType,
@@ -114,15 +108,6 @@ export const render = (
         }
 
         dispatch(action)
-
-        if (actionType.startsWith("$")) {
-          node.dispatchEvent(
-            new CustomEvent(actionType, {
-              detail: action,
-              bubbles: true,
-            })
-          )
-        }
       })
       return {
         handler: () => {},

@@ -1,6 +1,6 @@
 {
   "name": "mosaic",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "description": "The Web UI Framework",
   "main": "dist/mosaic.min.js",
   "browser": "dist/mosaic.min.js",
