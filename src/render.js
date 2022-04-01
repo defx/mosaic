@@ -107,19 +107,15 @@ export const render = (
       */
 
       node.addEventListener(eventType, (event) => {
-        let isGlobal = actionType.startsWith("$")
-
         let action = {
           type: actionType,
           event,
+          context: context ? context.wrap(getState()) : getState(),
         }
-
-        if (!isGlobal)
-          action.context = context ? context.wrap(getState()) : getState()
 
         dispatch(action)
 
-        if (isGlobal) {
+        if (actionType.startsWith("$")) {
           node.dispatchEvent(
             new CustomEvent(actionType, {
               detail: action,
