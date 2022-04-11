@@ -37,6 +37,10 @@ export function configure(
   let state
   let updatedCallback = () => {}
 
+  let dollarKeys = Object.keys(update)
+    .concat(...middleware.map(Object.keys))
+    .filter((v) => v.startsWith("$"))
+
   function updateState(o) {
     state = { ...o }
     for (let k in derivations) {
@@ -117,10 +121,8 @@ export function configure(
     updatedCallback()
   }
 
-  for (let actionName in update) {
-    if (actionName.startsWith("$")) {
-      node.addEventListener(actionName, ({ detail }) => dispatch(detail))
-    }
+  for (let actionName of dollarKeys) {
+    node.addEventListener(actionName, ({ detail }) => dispatch(detail))
   }
 
   return {
