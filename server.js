@@ -13,7 +13,7 @@ export const start = async (config) => {
   let components = await helix({
     watch: true,
     input: {
-      // synergyjs: "./node_modules/synergy/dist/synergy.js",
+      mosaicjs: "./node_modules/mosaic/dist/mosaic.js",
       html: "./components/**/index.html",
       css: "./components/**/index.css",
       js: "./components/**/index.js",
@@ -70,8 +70,13 @@ export const start = async (config) => {
     }
   })
 
+  app.get("/mosaic.js", (_, res) => {
+    res.type(".js")
+    res.send(components.mosaicjs["node_modules/mosaic/dist/mosaic.js"].content)
+  })
+
   app.use(async function (req, res, next) {
-    let k = req.originalUrl.split("?")[0].replace(/^\/|\/$/g, "") || "/"
+    let k = "/" + req.originalUrl.split("?")[0].replace(/^\/|\/$/g, "")
 
     let route = matchRoute(k, config.routes)
 
@@ -102,7 +107,7 @@ export const start = async (config) => {
         <${route.component}></${route.component}>
         <script type="module">
 
-          import { define } from "https://www.unpkg.com/mosaic@1.0.8/dist/mosaic.js"
+          import { define } from "/mosaic.js";
 
           ${JSON.stringify(
             tagNames
