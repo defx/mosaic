@@ -29,6 +29,10 @@ Notes
 
 */
 
+function unique(arr) {
+  return [...new Set(arr)]
+}
+
 export function configure(
   { update = {}, middleware = [], derivations = {}, initialState = {} },
   node
@@ -37,9 +41,11 @@ export function configure(
   let state
   let updatedCallback = () => {}
 
-  let dollarKeys = Object.keys(update)
-    .concat(...middleware.map(Object.keys))
-    .filter((v) => v.startsWith("$"))
+  let dollarKeys = unique(
+    Object.keys(update)
+      .concat(...middleware.map(Object.keys))
+      .filter((v) => v.startsWith("$"))
+  )
 
   function updateState(o) {
     state = { ...o }
@@ -70,8 +76,8 @@ export function configure(
   function dispatch(action) {
     const { type } = action
 
-    if (type.startsWith("$") && !(type in update)) {
-      node.dispatchEvent(
+    if (type.startsWith("$")) {
+      node.parentNode.dispatchEvent(
         new CustomEvent(type, {
           detail: action,
           bubbles: true,
@@ -122,7 +128,9 @@ export function configure(
   }
 
   for (let actionName of dollarKeys) {
-    node.addEventListener(actionName, ({ detail }) => dispatch(detail))
+    node.addEventListener(actionName, ({ detail }) => {
+      dispatch(detail)
+    })
   }
 
   return {
