@@ -20,5 +20,9 @@
   },
   "bin": {
     "mosaic-cli": "index.js"
+  },
+  "devDependencies": {
+    "postcss": "^8.4.12",
+    "postcss-import": "^14.1.0"
   }
 }

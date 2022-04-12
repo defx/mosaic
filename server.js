@@ -2,9 +2,13 @@ import path from "path"
 import express from "express"
 
 import { helix } from "./helix.js"
-import { prefixSelectors } from "./css.js"
+import { prefixSelectors, resolveImports } from "./css.js"
 import { tagName, customTags, resolveTagNames } from "./helpers.js"
 import { matchRoute, getParams } from "./router.js"
+
+function wrap(a, b) {
+  return b ? `<${b}><${a}></${a}></${b}>` : `<${a}></${a}>`
+}
 
 export const start = async (config) => {
   let port = 3000
@@ -86,13 +90,30 @@ export const start = async (config) => {
 
     let templates = Object.values(components.html)
 
-    let tagName = route.component
-
     let pageTemplate = templates.find(
       ({ tagName }) => tagName === route.component
     )
 
     let tagNames = resolveTagNames(pageTemplate, templates)
+
+    if (config.wrapper) tagNames.unshift(config.wrapper)
+
+    let cssComponents = tagNames.reduce((styles, t) => {
+      let x = Object.values(components.css).find(
+        ({ filepath }) => tagName(filepath) === t
+      )
+      if (x) styles.push(x)
+      return styles
+    }, [])
+
+    let componentStyles = ""
+
+    for (let { content, filepath } of cssComponents) {
+      let css = await resolveImports(content, filepath)
+      componentStyles += css
+    }
+
+    let componentHTML = wrap(route.component, config.wrapper)
 
     let html = `
     <!DOCTYPE html>
@@ -101,10 +122,11 @@ export const start = async (config) => {
         <meta charset="UTF-8">
         <meta http-equiv="X-UA-Compatible" content="IE=edge">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <style></style>
+        <style>${componentStyles}</style>
     </head>
-    <body>  
-        <${route.component}></${route.component}>
+    <body>
+    
+        ${componentHTML}
         <script type="module">
 
           import { define } from "/mosaic.js";

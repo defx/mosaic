@@ -1,19 +1,19 @@
 import path from "path"
 
-// import postcss from "postcss"
-// import atImport from "postcss-import"
+import postcss from "postcss"
+import atImport from "postcss-import"
 
-// export function resolveImports(css, filepath) {
-//   return postcss()
-//     .use(atImport())
-//     .process(css, {
-//       from: filepath,
-//     })
-//     .then(({ css }) => css)
-// }
+export function resolveImports(css, filepath) {
+  return postcss()
+    .use(atImport())
+    .process(css, {
+      from: filepath,
+    })
+    .then(({ css }) => css)
+}
 
 function nextWord(css, count) {
-  return css.slice(count - 1).split(" ")[0]
+  return css.slice(count - 1).split(/[\s+|\n+|,]/)[0]
 }
 
 export function prefixSelectors(prefix, css) {
@@ -32,10 +32,12 @@ export function prefixSelectors(prefix, css) {
       insideBlock = true
     } else if (look && !insideBlock && !char.match(/\s/)) {
       let w = nextWord(css, count + 1)
+
       if (
         w !== prefix &&
         w.charAt(0) !== "@" &&
         w.charAt(0) !== ":" &&
+        w !== "*" &&
         w !== "html" &&
         w !== "body"
       ) {
