@@ -33,11 +33,13 @@ export function prefixSelectors(prefix, css) {
     } else if (look && !insideBlock && !char.match(/\s/)) {
       let w = nextWord(css, count + 1)
 
+      // console.log({ w })
+
       if (
         w !== prefix &&
         w.charAt(0) !== "@" &&
         w.charAt(0) !== ":" &&
-        w !== "*" &&
+        w.charAt(0) !== "*" &&
         w !== "html" &&
         w !== "body"
       ) {
