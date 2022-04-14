@@ -12,7 +12,7 @@ function wrap(a, b) {
 
 export const start = async (config) => {
   let port = 3000
-  let app = new express()
+  let app = express()
 
   let components = await helix({
     watch: true,
