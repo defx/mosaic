@@ -19,7 +19,7 @@ export const define = (name, factory, template) =>
 
           if (config instanceof Promise) config = await config
 
-          let { subscribe, shadow, initialState = {}, observe = [] } = config
+          let { subscribe, shadow, observe = [] } = config
 
           this.connectedCallback = config.connectedCallback
           this.disconnectedCallback = config.disconnectedCallback
@@ -29,7 +29,7 @@ export const define = (name, factory, template) =>
             this
           )
 
-          initialState = getState()
+          let initialState = getState()
 
           observe = observe.map(kebabToPascal)
 
@@ -39,12 +39,24 @@ export const define = (name, factory, template) =>
           this.setAttribute = (k, v) => {
             if (observedAttributes.includes(k)) {
               let { name, value } = attributeToProp(k, v)
+
               dispatch({
                 type: "SET",
                 payload: { name, value },
               })
             }
             sa.apply(this, [k, v])
+          }
+          let ra = this.removeAttribute
+          this.removeAttribute = (k) => {
+            if (observedAttributes.includes(k)) {
+              let { name, value } = attributeToProp(k, null)
+              dispatch({
+                type: "SET",
+                payload: { name, value },
+              })
+            }
+            ra.apply(this, [k])
           }
 
           observedAttributes.forEach((name) => {
