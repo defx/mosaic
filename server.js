@@ -57,6 +57,20 @@ export const start = async (config) => {
 
   app.use("/components", express.static("components"))
 
+  function expandPartials(html) {
+    let tags = customTags(html)
+    for (let tag of tags) {
+      if (!components[tag].js && components[tag].html) {
+        // this component has no js module so lets treat it as a partial...
+        html = html.replaceAll(
+          `</${tag}>`,
+          `${components[tag].html.content}</${tag}>`
+        )
+      }
+    }
+    return html
+  }
+
   app.get("/components/:id/entry.js", (req, res, next) => {
     let name = req.params.id
 
@@ -66,7 +80,7 @@ export const start = async (config) => {
       res.type(".js")
       res.send(`
         import factory from "./index.js";
-        const template = \`${component.html.content}\`;
+        const template = \`${expandPartials(component.html.content)}\`;
         export { factory, template }
       `)
     } else {
@@ -132,7 +146,7 @@ export const start = async (config) => {
           import { define } from "/mosaic.js";
 
           ${JSON.stringify(
-            tagNames
+            tagNames.filter((name) => components[name].js)
           )}.forEach(name => import(\`/components/\${name}/entry.js\`).then(({ factory, template }) => define(name, factory, template)));
         </script>
     </body>
