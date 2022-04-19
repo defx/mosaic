@@ -146,6 +146,8 @@ export const start = async (config) => {
     console.log(`Express server listening on port ${port}`)
   )
 
+  app.use("/node_modules", express.static("node_modules"))
+
   return {
     config,
     components,
