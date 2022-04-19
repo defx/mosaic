@@ -8,10 +8,7 @@ function systemReducer(state, action) {
       let o = { ...state }
       setValueAtPath(name, value, o)
 
-      return {
-        ...state,
-        [name]: value,
-      }
+      return o
     }
     case "MERGE": {
       return {
