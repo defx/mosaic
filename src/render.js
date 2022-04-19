@@ -4,6 +4,7 @@ import {
   debounce,
   fragmentFromTemplate,
   getValueAtPath,
+  setValueAtPath,
   last,
   walk,
 } from "./helpers.js"
@@ -72,7 +73,7 @@ export const render = (
 
         if (context) {
           let state = context.wrap(getState())
-          state[path] = value
+          setValueAtPath(path, value, state)
           dispatch({
             type: "MERGE",
             payload: state,

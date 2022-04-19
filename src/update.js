@@ -1,7 +1,13 @@
+import { setValueAtPath } from "./helpers.js"
+
 function systemReducer(state, action) {
   switch (action.type) {
     case "SET": {
       const { name, value } = action.payload
+
+      let o = { ...state }
+      setValueAtPath(name, value, o)
+
       return {
         ...state,
         [name]: value,

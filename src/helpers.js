@@ -49,6 +49,11 @@ export const getValueAtPath = (path, target) => {
   return v
 }
 
+export const setValueAtPath = (path, value, target) => {
+  let [a, b] = getTarget(path, target)
+  return (a[b] = value)
+}
+
 export const fragmentFromTemplate = (v) => {
   if (typeof v === "string") {
     let tpl = document.createElement("template")
