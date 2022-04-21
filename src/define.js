@@ -114,8 +114,9 @@ export const define = (name, factory, template) =>
             )
           )
           this.initialised = true
+
+          this.connectedCallback?.({ dispatch, getState })
         }
-        this.connectedCallback?.()
       }
       disconnectedCallback() {
         this.disconnectedCallback?.()
