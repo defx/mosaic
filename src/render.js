@@ -65,7 +65,11 @@ export const render = (
       }
     },
     [INPUT]: ({ node, path, context }, { getState, dispatch }) => {
-      node.addEventListener("input", () => {
+      let eventType = ["radio", "checkbox"].includes(node.type)
+        ? "click"
+        : "input"
+
+      node.addEventListener(eventType, () => {
         let value =
           node.getAttribute("type") === "checkbox" ? node.checked : node.value
 
