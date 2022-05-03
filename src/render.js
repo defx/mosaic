@@ -1,4 +1,11 @@
-import { TEXT, ATTRIBUTE, INPUT, EVENT, REPEAT } from "./constants.js"
+import {
+  TEXT,
+  ATTRIBUTE,
+  INPUT,
+  EVENT,
+  REPEAT,
+  CONDITIONAL,
+} from "./constants.js"
 import { updateFormControl } from "./formControl.js"
 import {
   debounce,
@@ -7,11 +14,13 @@ import {
   setValueAtPath,
   last,
   walk,
+  wrapToken,
 } from "./helpers.js"
 import { compareKeyedLists, getBlocks, parseEach, updateList } from "./list.js"
 import { getParts, getValueFromParts, hasMustache } from "./token.js"
 import { applyAttribute } from "./attribute.js"
 import { createContext } from "./context.js"
+import { convertToTemplate } from "./template.js"
 
 export const render = (
   target,
@@ -118,23 +127,36 @@ export const render = (
         handler: () => {},
       }
     },
+    [CONDITIONAL]: ({ node, expression, context }, { getState }) => {
+      let state = context ? context.wrap(getState()) : getState()
+      let shouldMount = getValueFromParts(
+        state,
+        getParts(wrapToken(expression))
+      )
+      let isMounted = node.getAttribute("m") === "1"
+
+      if (shouldMount && !isMounted) {
+        //...MOUNT
+      } else if (!shouldMount && isMounted) {
+        //...UNMOUNT'
+      }
+
+      /*
+      
+      @todo: also need to reuse the pickupNode concept so that the parser can jump over the rendered block after hydrating
+      
+      */
+
+      console.log(node, { expression, value })
+    },
     [REPEAT]: (
-      {
-        node,
-        context,
-        map,
-        path,
-        identifier,
-        index,
-        key,
-        blockIndex,
-        hydrate,
-        pickupNode,
-      },
+      { node, context, map, path, identifier, index, key, blockIndex, hydrate },
       { getState }
     ) => {
       let oldValue
       node.$t = blockIndex - 1
+
+      let pickupNode
 
       const initialiseBlock = (rootNode, i, k, exitNode) => {
         walk(
@@ -249,22 +271,12 @@ export const render = (
             let ns = node.namespaceURI
             let m
 
+            node.removeAttribute("each")
+            node = convertToTemplate(node)
+
             if (ns.endsWith("/svg")) {
-              node.removeAttribute("each")
-              let tpl = document.createElementNS(ns, "defs")
-              tpl.innerHTML = node.outerHTML
-              node.parentNode.replaceChild(tpl, node)
-              node = tpl
               m = parse(node.firstChild)
             } else {
-              if (node.nodeName !== "TEMPLATE") {
-                node.removeAttribute("each")
-                let tpl = document.createElement("template")
-
-                tpl.innerHTML = node.outerHTML
-                node.parentNode.replaceChild(tpl, node)
-                node = tpl
-              }
               m = parse(node.content.firstChild)
             }
 
@@ -275,7 +287,6 @@ export const render = (
               map: m,
               blockIndex: blockCount++,
               ...each,
-              pickupNode,
             })
 
             break
@@ -300,6 +311,13 @@ export const render = (
 
               node.removeAttribute(name)
               node.setAttribute("name", value)
+            } else if (name === ":if") {
+              // node.removeAttribute(name)
+              convertToTemplate(node)
+              x.push({
+                type: CONDITIONAL,
+                expression: value,
+              })
             } else if (name.startsWith(":on")) {
               node.removeAttribute(name)
               let eventType = name.split(":on")[1]

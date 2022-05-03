@@ -1,3 +1,9 @@
+export const wrapToken = (v) => {
+  v = v.trim()
+  if (v.startsWith("{{")) return v
+  return `{{${v}}}`
+}
+
 export const last = (v = []) => v[v.length - 1]
 
 export const isWhitespace = (node) => {
