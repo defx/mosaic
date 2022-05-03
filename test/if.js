@@ -1,7 +1,7 @@
 import { define } from "../src/index.js"
 
-describe.only("if blocks", () => {
-  xit("renders the elements", () => {
+describe("if blocks", () => {
+  it("renders the elements", () => {
     let name = createName()
     define(
       name,
@@ -20,6 +20,26 @@ describe.only("if blocks", () => {
 
     assert.ok($("button#login"))
     assert.notOk($("button#logout"))
+  })
+  it("renders the elements", () => {
+    let name = createName()
+    define(
+      name,
+      () => ({
+        initialState: {
+          loggedIn: true,
+        },
+      }),
+      `
+        <button :if="!loggedIn" id="login">LOG IN</button>
+        <button :if="loggedIn" id="logout">LOG OUT</button>
+    `
+    )
+
+    mount(`<${name}></${name}>`)
+
+    assert.ok($("button#logout"))
+    assert.notOk($("button#login"))
   })
   it("toggles the elements", async () => {
     //...
@@ -47,17 +67,17 @@ describe.only("if blocks", () => {
       }),
       `
         <button :onclick="logIn" :if="!loggedIn" id="login">LOG IN</button>
-        <button :onclick="logOut" :if="loggedIn" id="logout>LOG OUT</button>
+        <button :onclick="logOut" :if="loggedIn" id="logout">LOG OUT</button>
     `
     )
 
     mount(`<${name}></${name}>`)
 
-    // $("button#login").click()
+    $("button#login").click()
 
-    // await nextFrame()
+    await nextFrame()
 
-    // assert.ok($("button#logout"))
-    // assert.notOk($("button#login"))
+    assert.ok($("button#logout"))
+    assert.notOk($("button#login"))
   })
 })

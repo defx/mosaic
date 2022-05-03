@@ -13,7 +13,7 @@ export const convertToTemplate = (node) => {
 
     tpl.innerHTML = node.outerHTML
     node.parentNode.replaceChild(tpl, node)
-    console.log(tpl)
+
     return tpl
   }
 }

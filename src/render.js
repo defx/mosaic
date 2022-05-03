@@ -127,7 +127,7 @@ export const render = (
         handler: () => {},
       }
     },
-    [CONDITIONAL]: ({ node, expression, context }, { getState }) => {
+    [CONDITIONAL]: ({ node, expression, context, map }, { getState }) => {
       return {
         handler: () => {
           let state = context ? context.wrap(getState()) : getState()
@@ -137,14 +137,14 @@ export const render = (
           )
           let isMounted = node.getAttribute("m") === "1"
 
-          console.log(node, expression, { shouldMount, isMounted })
-
           if (shouldMount && !isMounted) {
-            //...MOUNT
+            // MOUNT
             let frag = fragmentFromTemplate(node)
+            walk(frag.firstChild, bindAll(map))
             node.after(frag)
             node.setAttribute("m", "1")
           } else if (!shouldMount && isMounted) {
+            // UNMOUNT
             node.nextSibling.remove()
             node.removeAttribute("m")
           }
@@ -236,9 +236,7 @@ export const render = (
         o.subscribe(s.handler)
         return s
       },
-      // scheduleUpdate: debounce((state, cb) => {
-      //   return o.publish(state, cb)
-      // }),
+
       update(cb) {
         return o.publish(cb)
       },
@@ -256,6 +254,7 @@ export const render = (
     walk(frag, (node) => {
       let x = []
       let pickupNode
+
       switch (node.nodeType) {
         case node.TEXT_NODE: {
           let value = node.textContent
@@ -315,11 +314,14 @@ export const render = (
               node.removeAttribute(name)
               node.setAttribute("name", value)
             } else if (name === ":if") {
+              node.removeAttribute(name)
+              node = convertToTemplate(node)
               pickupNode = node.nextSibling
-              convertToTemplate(node)
+
               x.push({
                 type: CONDITIONAL,
                 expression: value,
+                map: parse(node.content?.firstChild || node.firstChild),
               })
             } else if (name.startsWith(":on")) {
               node.removeAttribute(name)
