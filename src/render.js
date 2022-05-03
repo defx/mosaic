@@ -128,26 +128,29 @@ export const render = (
       }
     },
     [CONDITIONAL]: ({ node, expression, context }, { getState }) => {
-      let state = context ? context.wrap(getState()) : getState()
-      let shouldMount = getValueFromParts(
-        state,
-        getParts(wrapToken(expression))
-      )
-      let isMounted = node.getAttribute("m") === "1"
+      return {
+        handler: () => {
+          let state = context ? context.wrap(getState()) : getState()
+          let shouldMount = getValueFromParts(
+            state,
+            getParts(wrapToken(expression))
+          )
+          let isMounted = node.getAttribute("m") === "1"
 
-      if (shouldMount && !isMounted) {
-        //...MOUNT
-      } else if (!shouldMount && isMounted) {
-        //...UNMOUNT'
+          console.log(node, expression, { shouldMount, isMounted })
+
+          if (shouldMount && !isMounted) {
+            //...MOUNT
+            let frag = fragmentFromTemplate(node)
+            node.after(frag)
+            node.setAttribute("m", "1")
+          } else if (!shouldMount && isMounted) {
+            node.nextSibling.remove()
+            node.removeAttribute("m")
+          }
+        },
+        // pickupNode,
       }
-
-      /*
-      
-      @todo: also need to reuse the pickupNode concept so that the parser can jump over the rendered block after hydrating
-      
-      */
-
-      console.log(node, { expression, value })
     },
     [REPEAT]: (
       { node, context, map, path, identifier, index, key, blockIndex, hydrate },
@@ -312,7 +315,7 @@ export const render = (
               node.removeAttribute(name)
               node.setAttribute("name", value)
             } else if (name === ":if") {
-              // node.removeAttribute(name)
+              pickupNode = node.nextSibling
               convertToTemplate(node)
               x.push({
                 type: CONDITIONAL,
