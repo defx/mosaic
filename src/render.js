@@ -140,7 +140,7 @@ export const render = (
           if (shouldMount && !isMounted) {
             // MOUNT
             let frag = fragmentFromTemplate(node)
-            walk(frag.firstChild, bindAll(map))
+            walk(frag.firstChild, bindAll(map, null, context))
             node.after(frag)
             node.setAttribute("m", "1")
           } else if (!shouldMount && isMounted) {
