@@ -5,6 +5,7 @@ import { helix } from "./helix.js"
 import { prefixSelectors, resolveImports } from "./css.js"
 import { tagName, customTags, resolveTagNames } from "./helpers.js"
 import { matchRoute, getParams } from "./router.js"
+import { createProxyMiddleware } from "http-proxy-middleware"
 
 function wrap(a, b) {
   return b ? `<${b}><${a}></${a}></${b}>` : `<${a}></${a}>`
@@ -57,8 +58,7 @@ export const start = async (config) => {
 
   app.use("/components", express.static("components"))
 
-  function expandPartials(html) {
-    let tags = customTags(html)
+  function expandPartials(html, tags) {
     for (let tag of tags) {
       if (!components[tag].js && components[tag].html) {
         // this component has no js module so lets treat it as a partial...
@@ -77,10 +77,12 @@ export const start = async (config) => {
     if (name in components) {
       let component = components[name]
 
+      let tags = resolveTagNames(component.html, Object.values(components.html))
+
       res.type(".js")
       res.send(`
         import factory from "./index.js";
-        const template = \`${expandPartials(component.html.content)}\`;
+        const template = \`${expandPartials(component.html.content, tags)}\`;
         export { factory, template }
       `)
     } else {
@@ -156,11 +158,25 @@ export const start = async (config) => {
     res.send(html)
   })
 
+  app.use("/node_modules", express.static("node_modules"))
+
+  app.use(
+    "/api",
+    createProxyMiddleware({
+      target: {
+        host: "localhost",
+        port: 4000,
+      },
+      secure: false,
+      pathRewrite: {
+        [`^/api`]: "",
+      },
+    })
+  )
+
   app.listen(port, () =>
     console.log(`Express server listening on port ${port}`)
   )
-
-  app.use("/node_modules", express.static("node_modules"))
 
   return {
     config,
