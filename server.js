@@ -57,12 +57,13 @@ export const start = async (config) => {
   })
 
   app.use("/components", express.static("components"))
+  app.use(express.static("public"))
 
   function expandPartials(html) {
     let tags = customTags(html)
 
     for (let tag of tags) {
-      if (!components[tag].js && components[tag].html) {
+      if (components[tag] && !components[tag].js && components[tag].html) {
         // this component has no js module so lets treat it as a partial...
         html = html.replaceAll(
           `</${tag}>`,
