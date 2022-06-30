@@ -9,7 +9,7 @@ export function matchRoute(pathname, routes) {
   }
 }
 
-export function getParams(pathname, route) {
+export function getParamsAsObject(pathname, route) {
   let a = pathname.split("/")
   let b = route.match.split("/")
   return b.reduce((o, k, i) => {
@@ -18,4 +18,16 @@ export function getParams(pathname, route) {
     }
     return o
   }, {})
+}
+
+export function getParams(pathname, route) {
+  let a = pathname.split("/")
+  let b = route.match.split("/")
+  let result = ""
+  b.forEach((k, i) => {
+    if (k.charAt(0) === ":") {
+      result += ` ${k.slice(1)}="${a[i]}"`
+    }
+  })
+  return result
 }

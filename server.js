@@ -7,12 +7,8 @@ import { tagName, customTags, resolveTagNames } from "./helpers.js"
 import { matchRoute, getParams } from "./router.js"
 import { createProxyMiddleware } from "http-proxy-middleware"
 
-function wrap(a, b) {
-  return b ? `<${b}><${a}></${a}></${b}>` : `<${a}></${a}>`
-}
-
 export const start = async (config) => {
-  let port = 3000
+  let port = config.port || 3000
   let app = express()
 
   let components = await helix({
@@ -105,7 +101,7 @@ export const start = async (config) => {
 
     if (!route) return next()
 
-    // let params = getParams(k, route)
+    let params = getParams(k, route)
 
     let templates = Object.values(components.html)
 
@@ -132,7 +128,7 @@ export const start = async (config) => {
       componentStyles += css
     }
 
-    let componentHTML = wrap(route.component, config.wrapper)
+    let componentHTML = `<${route.component}${params}></${route.component}>`
 
     let html = `
     <!DOCTYPE html>
