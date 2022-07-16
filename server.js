@@ -5,7 +5,7 @@ import { helix } from "./helix.js"
 import { prefixSelectors, resolveImports } from "./css.js"
 import { tagName, customTags, resolveTagNames } from "./helpers.js"
 import { matchRoute, getParams } from "./router.js"
-import { createProxyMiddleware } from "http-proxy-middleware"
+// import { createProxyMiddleware } from "http-proxy-middleware"
 
 export const start = async (config) => {
   let port = config.port || 3000
@@ -14,7 +14,7 @@ export const start = async (config) => {
   let components = await helix({
     watch: true,
     input: {
-      mosaicjs: "./node_modules/mosaic/dist/mosaic.js",
+      synergyjs: "./node_modules/synergy/dist/synergy.js",
       html: "./components/**/index.html",
       css: "./components/**/index.css",
       js: "./components/**/index.js",
@@ -89,9 +89,11 @@ export const start = async (config) => {
     }
   })
 
-  app.get("/mosaic.js", (_, res) => {
+  app.get("/synergy.js", (_, res) => {
     res.type(".js")
-    res.send(components.mosaicjs["node_modules/mosaic/dist/mosaic.js"].content)
+    res.send(
+      components.synergyjs["node_modules/synergy/dist/synergy.js"].content
+    )
   })
 
   app.use(async function (req, res, next) {
@@ -144,11 +146,19 @@ export const start = async (config) => {
         ${componentHTML}
         <script type="module">
 
-          import { define } from "/mosaic.js";
+          import { define } from "/synergy.js";
 
           ${JSON.stringify(
             tagNames.filter((name) => components[name].js)
           )}.forEach(name => import(\`/components/\${name}/entry.js\`).then(({ factory, template }) => define(name, factory, template)));
+        </script>
+        <script>
+          new WebSocket("ws://localhost:80").addEventListener(
+            "message",
+            (event) => {
+              if (event.data === "reload") window.location.reload()
+            }
+          )
         </script>
     </body>
     </html>
@@ -159,19 +169,19 @@ export const start = async (config) => {
 
   app.use("/node_modules", express.static("node_modules"))
 
-  app.use(
-    "/api",
-    createProxyMiddleware({
-      target: {
-        host: "localhost",
-        port: 4000,
-      },
-      secure: false,
-      pathRewrite: {
-        [`^/api`]: "",
-      },
-    })
-  )
+  // app.use(
+  //   "/api",
+  //   createProxyMiddleware({
+  //     target: {
+  //       host: "localhost",
+  //       port: 4000,
+  //     },
+  //     secure: false,
+  //     pathRewrite: {
+  //       [`^/api`]: "",
+  //     },
+  //   })
+  // )
 
   app.listen(port, () =>
     console.log(`Express server listening on port ${port}`)
