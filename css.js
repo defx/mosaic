@@ -54,7 +54,7 @@ export function prefixSelectors(prefix, css) {
       } else if (look && !insideBlock && !char.match(/\s/)) {
         let w = nextWord(css, count + 1)
 
-        console.log({ w })
+        // console.log({ w })
 
         if (
           w !== prefix &&

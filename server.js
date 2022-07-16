@@ -130,7 +130,7 @@ export const start = async (config) => {
       componentStyles += css
     }
 
-    let componentHTML = `<${route.component}${params}></${route.component}>`
+    let componentHTML = expandPartials(pageTemplate.content, tagNames)
 
     let html = `
     <!DOCTYPE html>
