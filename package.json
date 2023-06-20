@@ -1,0 +1,33 @@
+{
+  "name": "mosaic",
+  "type": "module",
+  "version": "1.1.0",
+  "description": "A JavaScript library for progressive enhancing HTML",
+  "main": "dist/mosaic.min.js",
+  "browser": "dist/mosaic.min.js",
+  "unpkg": "dist/mosaic.min.js",
+  "module": "src/index.js",
+  "scripts": {
+    "test": "mocha-express --coverage",
+    "test:watch": "mocha-express --watch",
+    "size": "gzip -c9 ./dist/mosaic.min.js | wc -c",
+    "build": "rm -rf dist && rollup -c && npm run size",
+    "prepublish": "npm run build"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT",
+  "files": [
+    "src",
+    "dist",
+    "cjs"
+  ],
+  "directories": {
+    "test": "test"
+  },
+  "devDependencies": {
+    "mocha-express": "^0.1.2",
+    "rollup": "^2.79.1",
+    "rollup-plugin-terser": "^7.0.2"
+  }
+}
