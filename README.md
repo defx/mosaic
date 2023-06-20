@@ -53,7 +53,7 @@ export const Accordion = () => {
 }
 ```
 
-As you can see from the example above, the behaviour is described separately from the markup. This separation of concerns allows the same behaviour to be reused with custom HTML markup and styles fitting the requirements of a specific project. The only restrictions upon markup are imposed by the _selectors_. Generally these selectors should just be custom attributes (e.g., `[accordion-panel]`) that aren't tied to any specific element type. In some cases however, more specificity may be employed to ensure accessibility (as seen with the `button[accordion-trigger]` selector).
+As you can see from the example above, the behaviour is described separately from the markup. This separation of concerns allows the same behaviour to be reused with custom HTML markup and styles fitting the requirements of a specific project. The only restrictions upon markup are imposed by the _selectors_. Generally these selectors should just be custom attributes (e.g., `[accordion-panel]`) that aren't tied to any specific element type. In some cases however, more specificity may be employed to ensure accessibility (as seen with the `button[accordion-toggle]` selector in the example above).
 
 ## Install
 
