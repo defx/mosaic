@@ -68,5 +68,3 @@ import { define } from "https://unpkg.com/mosaic"
 ```sh
 > npm i mosaic
 ```
-
-## Usage
