@@ -15,6 +15,9 @@ describe("combo-box", () => {
   function mount() {
     rootNode.innerHTML = /* html */ `
     <style>
+      combobox-example {
+        display: block;
+      }
       [role="option"][aria-selected="true"],
       [role="listbox"] [role="option"]:hover {
         background-color: #def;
@@ -25,11 +28,10 @@ describe("combo-box", () => {
         <label for="text-input">
             State
         </label>
-        <div class="combobox combobox-list">
-            <input id="text-input" type="text" name="searchInput">
-            <ul aria-label="States" role="listbox">
-            </ul>
-        </div>
+  
+        <input id="text-input" type="text" name="searchInput">
+        <ul aria-label="States" role="listbox"></ul>
+
     </combobox-example>`
   }
 
