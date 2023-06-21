@@ -103,8 +103,9 @@ export const ComboBox = ({ optionTemplate, options = [] }) => {
       },
       {
         select: `[role=listbox]`,
-        attribute: () => ({
+        attribute: (state) => ({
           id: listBoxId,
+          hidden: !state.filteredOptions?.length,
         }),
         list: {
           select: "[role=option]",
