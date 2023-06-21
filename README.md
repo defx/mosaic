@@ -1,13 +1,13 @@
 # Mosaic
 
-## Codify UI behaviour with declarative configuration
+## Codifying UI behaviour for maximum reusability across component libraries
 
 🚧 Please kindly note that this project is a work in progress 🚧
 
 [![npm](https://shields.io/npm/v/mosaic)](https://www.npmjs.com/package/mosaic)
 [![gzip size](https://img.badgesize.io/https://unpkg.com/mosaic/dist/mosaic.min.js?compression=gzip&label=gzip)](https://unpkg.com/mosaic/dist/mosaic.min.js)
 
-Mosaic's declarative configuration enables common UI behaviours to be reused effectively between different projects, ensuring a high level of performance and accessibility, whilst allowing developers to concentrate on the things that are particular to their specific business and project requirements (e.g., markup and styles)
+Mosaic enables common UI behaviours to be reused effectively between different projects, ensuring a high level of performance and accessibility, whilst allowing developers to concentrate on the things that are particular to their specific business and project requirements (e.g., markup and styles)
 
 ## Example
 
