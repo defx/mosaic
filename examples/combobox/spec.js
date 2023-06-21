@@ -9,18 +9,8 @@ describe("combo-box", () => {
   })
 
   afterEach(() => {
-    document.body.removeChild(rootNode)
+    // document.body.removeChild(rootNode)
   })
-
-  function sendKeys(el, str, replace = false) {
-    el.value = replace ? str : el.value + str
-    el.dispatchEvent(
-      new Event("input", {
-        bubbles: true,
-      })
-    )
-    return new Promise((resolve) => requestAnimationFrame(resolve))
-  }
 
   function mount() {
     rootNode.innerHTML = /* html */ `
@@ -53,6 +43,9 @@ describe("combo-box", () => {
     get listbox() {
       return document.querySelector(`[role=listbox]`)
     },
+    get options() {
+      return [...document.querySelectorAll(`[role=listbox] [role=option]`)]
+    },
   }
 
   it(`sets [role="combobox"] on the input`, () => {
@@ -80,7 +73,13 @@ describe("combo-box", () => {
     const { input, listbox } = select
     assert.equal(input.getAttribute("aria-expanded"), "false")
     assert.equal(listbox.hidden, true)
-    await sendKeys(input, "a")
+    input.value = "a"
+    input.dispatchEvent(
+      new Event("input", {
+        bubbles: true,
+      })
+    )
+    await nextFrame()
     assert.equal(input.getAttribute("aria-expanded"), "true")
     assert.equal(listbox.hidden, false)
   })
@@ -90,5 +89,25 @@ describe("combo-box", () => {
     const { input } = select
     /* notOk used here to match null or "", either should be fine  */
     assert.notOk(input.getAttribute("aria-activedescendant"))
+  })
+
+  it(`places focus on the first option when pressing the Down key`, async () => {
+    mount()
+    const { input, options } = select
+    input.value = "a"
+    input.dispatchEvent(
+      new Event("input", {
+        bubbles: true,
+      })
+    )
+    await nextFrame()
+    input.dispatchEvent(
+      new KeyboardEvent("keyup", {
+        key: "Down",
+        bubbles: true,
+      })
+    )
+    await nextFrame()
+    assert.equal(input.getAttribute("aria-activedescendant"), options[0].id)
   })
 })

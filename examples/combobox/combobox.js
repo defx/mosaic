@@ -82,6 +82,8 @@ export const ComboBox = ({ optionTemplate, options = [] }) => {
 
             const { key } = event
 
+            console.log("?", { key })
+
             switch (key) {
               case "Enter": {
                 store.dispatch("setValue")
