@@ -31,7 +31,7 @@ describe("combo-box", () => {
         color: #111;
       }
     </style>
-    <combo-box>
+    <combobox-example>
         <label for="text-input">
             State
         </label>
@@ -40,10 +40,13 @@ describe("combo-box", () => {
             <ul aria-label="States" role="listbox">
             </ul>
         </div>
-    </combo-box>`
+    </combobox-example>`
   }
 
   const select = {
+    get combobox() {
+      return document.querySelector(`combobox-example`)
+    },
     get input() {
       return document.querySelector(`input[type=text]`)
     },
@@ -80,5 +83,12 @@ describe("combo-box", () => {
     await sendKeys(input, "a")
     assert.equal(input.getAttribute("aria-expanded"), "true")
     assert.equal(listbox.hidden, false)
+  })
+
+  it(`has no [aria-activedescendant]`, () => {
+    mount()
+    const { input } = select
+    /* notOk used here to match null or "", either should be fine  */
+    assert.notOk(input.getAttribute("aria-activedescendant"))
   })
 })

@@ -33,9 +33,8 @@
 
         .combobox input {
             width: 150px;
-            border-right: none;
             outline: none;
-            font-size: 87.5%;
+            font-size: 1rem;
             padding: 1px 3px;
         }
 
@@ -61,7 +60,7 @@
             box-sizing: border-box;
             border: 2px currentcolor solid;
             max-height: 250px;
-            width: 168px;
+            width: 150px;
             overflow: scroll;
             overflow-x: hidden;
             font-size: 87.5%;
@@ -111,7 +110,7 @@
 
 <body>
 
-    <combo-box x-node="searchBox" x-on="change:onInputChange">
+    <combobox-example x-node="searchBox" x-on="change:onInputChange">
         <label for="cb1-input">
             State
         </label>
@@ -129,7 +128,7 @@
             <ul aria-label="States" role="listbox">
             </ul>
         </div>
-    </combo-box>
+    </combobox-example>
 
 
     <script type="module" src="index.js"></script>
