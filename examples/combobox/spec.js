@@ -9,7 +9,7 @@ describe("combo-box", () => {
   })
 
   afterEach(() => {
-    // document.body.removeChild(rootNode)
+    document.body.removeChild(rootNode)
   })
 
   function mount() {
@@ -25,13 +25,11 @@ describe("combo-box", () => {
       }
     </style>
     <combobox-example>
-        <label for="text-input">
-            State
-        </label>
-  
-        <input id="text-input" type="text" name="searchInput">
-        <ul aria-label="States" role="listbox"></ul>
-
+      <label for="text-input">
+          State
+      </label>
+      <input id="text-input" type="text" name="searchInput">
+      <ul aria-label="States" role="listbox"></ul>
     </combobox-example>`
   }
 
