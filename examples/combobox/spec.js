@@ -103,6 +103,33 @@ describe("combo-box", () => {
       })
     )
     await nextFrame()
+
+    const { options } = select
+
+    assert.ok(options.length >= 2)
+
+    options.forEach(async (option) => {
+      input.dispatchEvent(
+        new KeyboardEvent("keyup", {
+          key: "Down",
+          bubbles: true,
+        })
+      )
+      await nextFrame()
+
+      assert.equal(input.getAttribute("aria-activedescendant"), option.id)
+      assert.equal(option.getAttribute("aria-selected"), "true")
+
+      assert.equal(input, document.activeElement)
+
+      assert.equal(
+        select.listbox.querySelectorAll(`[aria-selected=true]`).length,
+        1
+      )
+    })
+
+    // now test that selection wraps around to the first option
+
     input.dispatchEvent(
       new KeyboardEvent("keyup", {
         key: "Down",
@@ -111,32 +138,8 @@ describe("combo-box", () => {
     )
     await nextFrame()
 
-    assert.equal(
-      input.getAttribute("aria-activedescendant"),
-      select.options[0].id
-    )
-    assert.equal(select.options[0].getAttribute("aria-selected"), "true")
-
-    assert.equal(input, document.activeElement)
-
-    assert.equal(
-      select.listbox.querySelectorAll(`[aria-selected=true]`).length,
-      1
-    )
-
-    input.dispatchEvent(
-      new KeyboardEvent("keyup", {
-        key: "Down",
-        bubbles: true,
-      })
-    )
-    await nextFrame()
-
-    assert.equal(
-      input.getAttribute("aria-activedescendant"),
-      select.options[1].id
-    )
-    assert.equal(select.options[1].getAttribute("aria-selected"), "true")
+    assert.equal(input.getAttribute("aria-activedescendant"), options[0].id)
+    assert.equal(options[0].getAttribute("aria-selected"), "true")
 
     assert.equal(input, document.activeElement)
 
