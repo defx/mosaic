@@ -28,7 +28,7 @@ describe("combo-box", () => {
       <label for="text-input">
           State
       </label>
-      <input id="text-input" type="text" name="searchInput">
+      <input id="text-input" type="text" role="combobox">
       <ul aria-label="States" role="listbox"></ul>
     </combobox-example>`
   }
@@ -38,7 +38,7 @@ describe("combo-box", () => {
       return document.querySelector(`combobox-example`)
     },
     get input() {
-      return document.querySelector(`input[type=text]`)
+      return document.querySelector(`[role="combobox"]`)
     },
     get listbox() {
       return document.querySelector(`[role=listbox]`)
@@ -93,7 +93,7 @@ describe("combo-box", () => {
 
   it(`places focus on the first option when pressing the Down key`, async () => {
     mount()
-    const { input, options } = select
+    const { input } = select
     input.value = "a"
     input.dispatchEvent(
       new Event("input", {
@@ -108,6 +108,81 @@ describe("combo-box", () => {
       })
     )
     await nextFrame()
-    assert.equal(input.getAttribute("aria-activedescendant"), options[0].id)
+    assert.equal(
+      input.getAttribute("aria-activedescendant"),
+      select.options[0].id
+    )
+  })
+
+  it("labels the input", () => {
+    mount()
+    const { input } = select
+    const { id } = input
+
+    const hasLabel = id && document.querySelector(`label[for="${id}"]`)
+    const isLabelled = input.hasAttribute("aria-label")
+    const isLabelledBy =
+      input.hasAttribute("aria-labelledby") &&
+      document.getElementById(input.getAttribute("aria-labelledby"))
+
+    assert.ok(hasLabel || isLabelled || isLabelledBy)
+  })
+
+  it("labels the listbox", () => {
+    mount()
+    const { listbox } = select
+
+    // is labelledby a legitimate case here?
+
+    const isLabelled = listbox.hasAttribute("aria-label")
+    assert.ok(isLabelled)
+  })
+
+  it("sets [role=option] on listbox elements", async () => {
+    mount()
+    const { input } = select
+    input.value = "a"
+    input.dispatchEvent(
+      new Event("input", {
+        bubbles: true,
+      })
+    )
+    await nextFrame()
+
+    assert.ok(select.options.length)
+    select.options.every((option) =>
+      assert.equal(option.getAttribute("role"), "option")
+    )
+  })
+
+  it(`sets [aria-selected] on option`, async () => {
+    mount()
+    const { input } = select
+    input.value = "a"
+    input.dispatchEvent(
+      new Event("input", {
+        bubbles: true,
+      })
+    )
+    await nextFrame()
+    input.dispatchEvent(
+      new KeyboardEvent("keyup", {
+        key: "Down",
+        bubbles: true,
+      })
+    )
+    await nextFrame()
+    assert.ok(select.options.length)
+    assert.equal(select.options[0].getAttribute("aria-selected"), "true")
+    assert.equal(select.options[1].getAttribute("aria-selected"), "false")
+    input.dispatchEvent(
+      new KeyboardEvent("keyup", {
+        key: "Down",
+        bubbles: true,
+      })
+    )
+    await nextFrame()
+    assert.equal(select.options[0].getAttribute("aria-selected"), "false")
+    assert.equal(select.options[1].getAttribute("aria-selected"), "true")
   })
 })
