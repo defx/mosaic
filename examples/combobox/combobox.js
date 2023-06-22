@@ -59,9 +59,8 @@ export const ComboBox = ({ optionTemplate, options = [] }) => {
     },
     elements: [
       {
-        select: "input[type=text]",
+        select: `[role="combobox"]`,
         attribute: ({ filteredOptions = [], selectedOption }) => ({
-          role: "combobox",
           ariaAutocomplete: "list",
           ariaExpanded: !!filteredOptions.length,
           ariaControls: listBoxId,
@@ -81,8 +80,6 @@ export const ComboBox = ({ optionTemplate, options = [] }) => {
             if (!options?.length) return
 
             const { key } = event
-
-            console.log("?", { key })
 
             switch (key) {
               case "Enter": {
