@@ -1,13 +1,20 @@
 # Mosaic
 
-## Codifying UI behaviour for maximum reusability across component libraries
+## Accelerate your UI development
 
-🚧 Please kindly note that this project is a work in progress 🚧
+🚧 Please kindly note that this project is a work in progress. Collaborators welcome 🚧
+
+## Mosaic allows authors to write once and run anywhere
+
+Mosaic enables UI behaviour to be described using a combination of functional programming and declarative configuration, separating behaviour from presentation to ensure maximum reusability.
+
+## Mosaic enables teams to focus on UI presentation
+
+Get a head start on UI development by leveraging UI behaviour that is
+highly performant, accessible, and fully tested straight out of the box, letting you focus on your project presentation.
 
 [![npm](https://shields.io/npm/v/mosaic)](https://www.npmjs.com/package/mosaic)
 [![gzip size](https://img.badgesize.io/https://unpkg.com/mosaic/dist/mosaic.min.js?compression=gzip&label=gzip)](https://unpkg.com/mosaic/dist/mosaic.min.js)
-
-Mosaic enables common UI behaviours to be reused effectively between different projects, ensuring a high level of performance and accessibility, whilst allowing developers to concentrate on the things that are particular to their specific business and project requirements (e.g., markup and styles)
 
 ## Example
 
@@ -53,7 +60,7 @@ export const Accordion = () => {
 }
 ```
 
-As you can see from the example above, the behaviour is described separately from the markup. This separation of concerns allows the same behaviour to be reused with custom HTML markup and styles fitting the requirements of a specific project. The only restrictions upon markup are imposed by the _selectors_. Generally these selectors should just be custom attributes (e.g., `[accordion-panel]`) that aren't tied to any specific element type. In some cases however, more specificity may be employed to ensure accessibility (as seen with the `button[accordion-toggle]` selector in the example above).
+As you can see from the example above, the behaviour is described separately from the markup. This separation of concerns allows the same behaviour to be reused with custom HTML markup and styles fitting the requirements of a specific project. The only restrictions upon markup are imposed by the _selectors_. Generally these selectors are just custom attributes (e.g., `[accordion-panel]`) that aren't tied to any specific element type. In some cases however, more specificity may be employed to ensure accessibility (as seen with the `button[accordion-toggle]` selector in the example above).
 
 ## Install
 
