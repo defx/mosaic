@@ -91,9 +91,11 @@ describe("combo-box", () => {
     assert.notOk(input.getAttribute("aria-activedescendant"))
   })
 
-  it(`places focus on the first option when pressing the Down key`, async () => {
+  it(`selects the option when pressing the Down key`, async () => {
     mount()
     const { input } = select
+
+    input.focus()
     input.value = "a"
     input.dispatchEvent(
       new Event("input", {
@@ -108,9 +110,39 @@ describe("combo-box", () => {
       })
     )
     await nextFrame()
+
     assert.equal(
       input.getAttribute("aria-activedescendant"),
       select.options[0].id
+    )
+    assert.equal(select.options[0].getAttribute("aria-selected"), "true")
+
+    assert.equal(input, document.activeElement)
+
+    assert.equal(
+      select.listbox.querySelectorAll(`[aria-selected=true]`).length,
+      1
+    )
+
+    input.dispatchEvent(
+      new KeyboardEvent("keyup", {
+        key: "Down",
+        bubbles: true,
+      })
+    )
+    await nextFrame()
+
+    assert.equal(
+      input.getAttribute("aria-activedescendant"),
+      select.options[1].id
+    )
+    assert.equal(select.options[1].getAttribute("aria-selected"), "true")
+
+    assert.equal(input, document.activeElement)
+
+    assert.equal(
+      select.listbox.querySelectorAll(`[aria-selected=true]`).length,
+      1
     )
   })
 
@@ -153,36 +185,5 @@ describe("combo-box", () => {
     select.options.every((option) =>
       assert.equal(option.getAttribute("role"), "option")
     )
-  })
-
-  it(`sets [aria-selected] on option`, async () => {
-    mount()
-    const { input } = select
-    input.value = "a"
-    input.dispatchEvent(
-      new Event("input", {
-        bubbles: true,
-      })
-    )
-    await nextFrame()
-    input.dispatchEvent(
-      new KeyboardEvent("keyup", {
-        key: "Down",
-        bubbles: true,
-      })
-    )
-    await nextFrame()
-    assert.ok(select.options.length)
-    assert.equal(select.options[0].getAttribute("aria-selected"), "true")
-    assert.equal(select.options[1].getAttribute("aria-selected"), "false")
-    input.dispatchEvent(
-      new KeyboardEvent("keyup", {
-        key: "Down",
-        bubbles: true,
-      })
-    )
-    await nextFrame()
-    assert.equal(select.options[0].getAttribute("aria-selected"), "false")
-    assert.equal(select.options[1].getAttribute("aria-selected"), "true")
   })
 })
