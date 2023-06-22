@@ -2,7 +2,7 @@
 
 ## Accelerate your UI development
 
-🚧 Please kindly note that this project is a work in progress. Collaborators welcome 🚧
+🚧 Please kindly note that this project is a work in progress. Collaborators welcome. To understand where we're going, please check the Roadmap 🚧
 
 ## Mosaic allows authors to write once and run anywhere
 
@@ -75,3 +75,10 @@ import { define } from "https://unpkg.com/mosaic"
 ```sh
 > npm i mosaic
 ```
+
+## Roadmap
+
+The current plan is that the Mosaic project will broadly consist of two parts:
+
+1. The core library, which can be used to configure and define Mosaics behavioural components
+2. A suite of behavioural components implementing the most common pattern of the web. These will be largely influenced by those described in the ARIA Patterns Guide (APG).
