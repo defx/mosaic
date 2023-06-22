@@ -9,7 +9,7 @@ describe("combo-box", () => {
   })
 
   afterEach(() => {
-    document.body.removeChild(rootNode)
+    // document.body.removeChild(rootNode)
   })
 
   function mount() {
@@ -91,7 +91,7 @@ describe("combo-box", () => {
     assert.notOk(input.getAttribute("aria-activedescendant"))
   })
 
-  it(`selects the option when pressing the Down key`, async () => {
+  it(`cycles the options when pressing the Down key`, async () => {
     mount()
     const { input } = select
 
@@ -108,7 +108,7 @@ describe("combo-box", () => {
 
     assert.ok(options.length >= 2)
 
-    options.forEach(async (option) => {
+    for (const option of options) {
       input.dispatchEvent(
         new KeyboardEvent("keyup", {
           key: "Down",
@@ -126,13 +126,71 @@ describe("combo-box", () => {
         select.listbox.querySelectorAll(`[aria-selected=true]`).length,
         1
       )
-    })
+    }
 
     // now test that selection wraps around to the first option
 
     input.dispatchEvent(
       new KeyboardEvent("keyup", {
         key: "Down",
+        bubbles: true,
+      })
+    )
+    await nextFrame()
+
+    assert.equal(input.getAttribute("aria-activedescendant"), options[0].id)
+    assert.equal(options[0].getAttribute("aria-selected"), "true")
+
+    assert.equal(input, document.activeElement)
+
+    assert.equal(
+      select.listbox.querySelectorAll(`[aria-selected=true]`).length,
+      1
+    )
+  })
+
+  it(`cycles the options when pressing the Up key`, async () => {
+    mount()
+    const { input } = select
+
+    input.focus()
+    input.value = "a"
+    input.dispatchEvent(
+      new Event("input", {
+        bubbles: true,
+      })
+    )
+    await nextFrame()
+
+    const options = select.options.reverse()
+
+    assert.ok(options.length >= 2)
+
+    for (const option of options) {
+      input.dispatchEvent(
+        new KeyboardEvent("keyup", {
+          key: "Up",
+          bubbles: true,
+        })
+      )
+      await nextFrame()
+
+      assert.equal(input.getAttribute("aria-activedescendant"), option.id)
+      assert.equal(option.getAttribute("aria-selected"), "true")
+
+      assert.equal(input, document.activeElement)
+
+      assert.equal(
+        select.listbox.querySelectorAll(`[aria-selected=true]`).length,
+        1
+      )
+    }
+
+    // now test that selection wraps around to the last option
+
+    input.dispatchEvent(
+      new KeyboardEvent("keyup", {
+        key: "Up",
         bubbles: true,
       })
     )
