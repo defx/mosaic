@@ -39,18 +39,6 @@ export function initialise(rootNode, subscribe, config, store, state = {}) {
     }
   })
 
-  //derive initial state from lists...
-  elements
-    .filter(({ list }) => list)
-    .forEach(({ select, list }) => {
-      const targets = [...rootNode.querySelectorAll(select)]
-      targets.forEach((target) => {
-        const items = listItems(target, list.select)
-        const curr = listData(items)
-        state[list.from] = curr
-      })
-    })
-
   // delegate from the root node
   Object.entries(event).forEach(([type, listeners]) => {
     rootNode.addEventListener(type, (e) => {
