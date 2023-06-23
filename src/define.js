@@ -23,31 +23,11 @@ export const define = (name, configFn) => {
           },
         })
 
+        // @todo: reflection
         const observed = new Set()
-        const host = this
-
-        const wrap = (state) => {
-          return new Proxy(state, {
-            get(_, name) {
-              if (observed.has(name) === false) {
-                Object.defineProperty(host, name, {
-                  get() {
-                    return getState()[name]
-                  },
-                  set(value) {
-                    merge({ [name]: value })
-                  },
-                })
-
-                observed.add(name)
-              }
-              return Reflect.get(...arguments)
-            },
-          })
-        }
 
         const onChangeCallback = (state) => {
-          message.publish(wrap(state), config)
+          message.publish(state, config)
         }
 
         const store = Store({
