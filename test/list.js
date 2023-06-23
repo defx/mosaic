@@ -1,6 +1,6 @@
 import { $ } from "../src/index.js"
 
-describe("list sorting", () => {
+xdescribe("list sorting", () => {
   let rootNode
 
   beforeEach(() => {

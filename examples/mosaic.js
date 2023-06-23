@@ -186,18 +186,6 @@ function initialise(rootNode, subscribe, config, store, state = {}) {
     }
   });
 
-  //derive initial state from lists...
-  elements
-    .filter(({ list }) => list)
-    .forEach(({ select, list }) => {
-      const targets = [...rootNode.querySelectorAll(select)];
-      targets.forEach((target) => {
-        const items = listItems(target, list.select);
-        const curr = listData(items);
-        state[list.from] = curr;
-      });
-    });
-
   // delegate from the root node
   Object.entries(event).forEach(([type, listeners]) => {
     rootNode.addEventListener(type, (e) => {
@@ -343,30 +331,31 @@ const define = (name, configFn) => {
         });
 
         const observed = new Set();
-        const host = this;
 
-        const wrap = (state) => {
-          return new Proxy(state, {
-            get(_, name) {
-              if (observed.has(name) === false) {
-                Object.defineProperty(host, name, {
-                  get() {
-                    return getState()[name]
-                  },
-                  set(value) {
-                    merge({ [name]: value });
-                  },
-                });
+        // const wrap = (state) => {
+        //   return new Proxy(state, {
+        //     get(_, name) {
+        //       console.log("GET", { name, observed })
+        //       if (observed.has(name) === false) {
+        //         Object.defineProperty(host, name, {
+        //           get() {
+        //             return getState()[name]
+        //           },
+        //           set(value) {
+        //             merge({ [name]: value })
+        //           },
+        //         })
 
-                observed.add(name);
-              }
-              return Reflect.get(...arguments)
-            },
-          })
-        };
+        //         observed.add(name)
+        //       }
+        //       return Reflect.get(...arguments)
+        //     },
+        //   })
+        // }
 
         const onChangeCallback = (state) => {
-          message.publish(wrap(state), config);
+          // message.publish(wrap(state), config)
+          message.publish(state, config);
         };
 
         const store = Store({

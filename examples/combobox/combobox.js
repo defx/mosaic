@@ -9,16 +9,27 @@ export const ComboBox = ({ optionTemplate, options = [] }) => {
       searchText: "",
       options,
       selectedOption: -1,
+      listboxOpen: false,
+      filteredOptions: options,
     },
     action: {
       setValue: (state) => {
-        const { selectedOption, filteredOptions } = state
+        const { selectedOption, filteredOptions, searchText } = state
 
         return {
           ...state,
           selectedOption: -1,
-          searchText: filteredOptions[selectedOption]?.value,
+          searchText:
+            selectedOption > -1
+              ? filteredOptions[selectedOption].value
+              : searchText,
           filteredOptions: [],
+        }
+      },
+      openListbox: (state) => {
+        return {
+          ...state,
+          listboxOpen: true,
         }
       },
       selectNextOption: (state) => {
@@ -49,20 +60,21 @@ export const ComboBox = ({ optionTemplate, options = [] }) => {
         return {
           ...state,
           selectedOption: -1,
+          listboxOpen: true,
           filteredOptions: searchText.length
             ? options.filter(({ value }) =>
                 value.toLowerCase().startsWith(searchText)
               )
-            : [],
+            : options,
         }
       },
     },
     elements: [
       {
         select: `[role="combobox"]`,
-        attribute: ({ filteredOptions = [], selectedOption }) => ({
+        attribute: ({ filteredOptions = [], selectedOption, listboxOpen }) => ({
           ariaAutocomplete: "list",
-          ariaExpanded: !!filteredOptions.length,
+          ariaExpanded: listboxOpen,
           ariaControls: listBoxId,
           ariaActivedescendant: filteredOptions[selectedOption]?.id || "",
         }),
@@ -88,6 +100,7 @@ export const ComboBox = ({ optionTemplate, options = [] }) => {
               }
               case "Down":
               case "ArrowDown": {
+                store.dispatch("openListbox")
                 store.dispatch("selectNextOption")
                 break
               }
@@ -104,7 +117,7 @@ export const ComboBox = ({ optionTemplate, options = [] }) => {
         select: `[role=listbox]`,
         attribute: (state) => ({
           id: listBoxId,
-          hidden: !state.filteredOptions?.length,
+          hidden: !state.listboxOpen,
         }),
         list: {
           select: "[role=option]",

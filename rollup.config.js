@@ -4,7 +4,7 @@ export default [
   {
     input: "src/define.js",
     output: {
-      file: "dist/dynamo.js",
+      file: "dist/mosaic.js",
       format: "es",
     },
   },
@@ -19,7 +19,7 @@ export default [
     input: "src/define.js",
     plugins: [terser()],
     output: {
-      file: "dist/dynamo.min.js",
+      file: "dist/mosaic.min.js",
       format: "es",
     },
   },

@@ -9,7 +9,11 @@ describe("combo-box", () => {
   })
 
   afterEach(() => {
-    // document.body.removeChild(rootNode)
+    if (window.location.search.startsWith("?grep=")) {
+      // when the window is open on a particular test, keep the node in tact for visual debugging...
+      return
+    }
+    document.body.removeChild(rootNode)
   })
 
   function mount() {
@@ -68,6 +72,30 @@ describe("combo-box", () => {
     assert.equal(select.input.getAttribute("aria-controls"), select.listbox.id)
   })
 
+  it("labels the input", () => {
+    mount()
+    const { input } = select
+    const { id } = input
+
+    const hasLabel = id && document.querySelector(`label[for="${id}"]`)
+    const isLabelled = input.hasAttribute("aria-label")
+    const isLabelledBy =
+      input.hasAttribute("aria-labelledby") &&
+      document.getElementById(input.getAttribute("aria-labelledby"))
+
+    assert.ok(hasLabel || isLabelled || isLabelledBy)
+  })
+
+  it("labels the listbox", () => {
+    mount()
+    const { listbox } = select
+
+    // is labelledby a legitimate case here?
+
+    const isLabelled = listbox.hasAttribute("aria-label")
+    assert.ok(isLabelled)
+  })
+
   it(`manages expanded states`, async () => {
     mount()
     const { input, listbox } = select
@@ -89,6 +117,24 @@ describe("combo-box", () => {
     const { input } = select
     /* notOk used here to match null or "", either should be fine  */
     assert.notOk(input.getAttribute("aria-activedescendant"))
+  })
+
+  it(`opens the listbox with options when pressing the Down key on an empty input`, async () => {
+    mount()
+    const { input } = select
+
+    input.focus()
+
+    input.dispatchEvent(
+      new KeyboardEvent("keyup", {
+        key: "Down",
+        bubbles: true,
+      })
+    )
+    await nextFrame()
+    assert.equal(input.getAttribute("aria-expanded"), "true")
+    assert.equal(select.listbox.hidden, false)
+    assert.ok(select.options.length > 1)
   })
 
   it(`cycles the options when pressing the Down key`, async () => {
@@ -205,30 +251,6 @@ describe("combo-box", () => {
       select.listbox.querySelectorAll(`[aria-selected=true]`).length,
       1
     )
-  })
-
-  it("labels the input", () => {
-    mount()
-    const { input } = select
-    const { id } = input
-
-    const hasLabel = id && document.querySelector(`label[for="${id}"]`)
-    const isLabelled = input.hasAttribute("aria-label")
-    const isLabelledBy =
-      input.hasAttribute("aria-labelledby") &&
-      document.getElementById(input.getAttribute("aria-labelledby"))
-
-    assert.ok(hasLabel || isLabelled || isLabelledBy)
-  })
-
-  it("labels the listbox", () => {
-    mount()
-    const { listbox } = select
-
-    // is labelledby a legitimate case here?
-
-    const isLabelled = listbox.hasAttribute("aria-label")
-    assert.ok(isLabelled)
   })
 
   it("sets [role=option] on listbox elements", async () => {

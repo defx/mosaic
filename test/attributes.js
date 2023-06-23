@@ -1,6 +1,6 @@
 import { $ } from "../src/index.js"
 
-describe("x-node", () => {
+describe("attribution", () => {
   let rootNode
 
   beforeEach(() => {

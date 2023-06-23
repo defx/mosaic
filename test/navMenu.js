@@ -9,7 +9,7 @@ describe("navigation menu enhancement", () => {
   })
 
   afterEach(() => {
-    // document.body.removeChild(rootNode)
+    document.body.removeChild(rootNode)
   })
 
   it("binds click event and manages classes", async () => {
