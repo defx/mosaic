@@ -362,4 +362,37 @@ describe("combo-box", () => {
 
     assert.equal(input.value, textContent)
   })
+
+  it("replaces the input value with the selected option when the Tab key is pressed", async () => {
+    mount()
+    const { input } = select
+
+    input.value = "a"
+    input.dispatchEvent(
+      new Event("input", {
+        bubbles: true,
+      })
+    )
+    await nextFrame()
+
+    input.dispatchEvent(
+      new KeyboardEvent("keyup", {
+        key: "Down",
+        bubbles: true,
+      })
+    )
+    await nextFrame()
+
+    const { textContent } = select.options[0]
+
+    input.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        key: "Tab",
+        bubbles: true,
+      })
+    )
+    await nextFrame()
+
+    assert.equal(input.value, textContent)
+  })
 })

@@ -13,7 +13,7 @@ export const ComboBox = ({ optionTemplate, options = [] }) => {
       filteredOptions: options,
     },
     action: {
-      setValue: (state) => {
+      replaceSearchTextWithSelectedOption: (state) => {
         const { selectedOption, filteredOptions, searchText } = state
 
         return {
@@ -95,19 +95,23 @@ export const ComboBox = ({ optionTemplate, options = [] }) => {
           input: (_, store) => {
             store.dispatch("onSearchInput")
           },
-          keyup: (event, store) => {
-            if (event.ctrlKey || event.shiftKey) {
-              return
+          keydown: (event, store) => {
+            const { key } = event
+
+            switch (key) {
+              case "Tab": {
+                store.dispatch("closeListbox")
+                store.dispatch("replaceSearchTextWithSelectedOption")
+                break
+              }
             }
-
-            const { options } = store.getState()
-            if (!options?.length) return
-
+          },
+          keyup: (event, store) => {
             const { key } = event
 
             switch (key) {
               case "Enter": {
-                store.dispatch("setValue")
+                store.dispatch("replaceSearchTextWithSelectedOption")
                 break
               }
               case "Down":
