@@ -26,10 +26,22 @@ export const ComboBox = ({ optionTemplate, options = [] }) => {
           filteredOptions: [],
         }
       },
+      clearSearchInput: (state) => {
+        return {
+          ...state,
+          searchText: "",
+        }
+      },
       openListbox: (state) => {
         return {
           ...state,
           listboxOpen: true,
+        }
+      },
+      closeListbox: (state) => {
+        return {
+          ...state,
+          listboxOpen: false,
         }
       },
       selectNextOption: (state) => {
@@ -107,6 +119,17 @@ export const ComboBox = ({ optionTemplate, options = [] }) => {
               case "Up":
               case "ArrowUp": {
                 store.dispatch("selectPreviousOption")
+                break
+              }
+              case "Esc":
+              case "Escape": {
+                const { listboxOpen } = store.getState()
+
+                if (listboxOpen) {
+                  store.dispatch("closeListbox")
+                } else {
+                  store.dispatch("clearSearchInput")
+                }
                 break
               }
             }

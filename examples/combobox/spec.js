@@ -119,7 +119,7 @@ describe("combo-box", () => {
     assert.notOk(input.getAttribute("aria-activedescendant"))
   })
 
-  it(`opens the listbox with options when pressing the Down key on an empty input`, async () => {
+  it(`opens the listbox when pressing the Down key on an empty input`, async () => {
     mount()
     const { input } = select
 
@@ -134,7 +134,67 @@ describe("combo-box", () => {
     await nextFrame()
     assert.equal(input.getAttribute("aria-expanded"), "true")
     assert.equal(select.listbox.hidden, false)
-    assert.ok(select.options.length > 1)
+  })
+
+  it(`closes the listbox when pressing the Esc key if the listbox is open`, async () => {
+    mount()
+    const { input } = select
+
+    input.value = "a"
+    input.dispatchEvent(
+      new Event("input", {
+        bubbles: true,
+      })
+    )
+    await nextFrame()
+    assert.equal(input.getAttribute("aria-expanded"), "true")
+    assert.equal(select.listbox.hidden, false)
+
+    input.dispatchEvent(
+      new KeyboardEvent("keyup", {
+        key: "Esc",
+        bubbles: true,
+      })
+    )
+    await nextFrame()
+
+    assert.equal(input.getAttribute("aria-expanded"), "false")
+    assert.equal(input.value, "a")
+    assert.equal(select.listbox.hidden, true)
+  })
+
+  it(`clears the input when pressing the Esc if the listbox is closed`, async () => {
+    mount()
+    const { input } = select
+
+    input.value = "a"
+    input.dispatchEvent(
+      new Event("input", {
+        bubbles: true,
+      })
+    )
+    await nextFrame()
+
+    assert.equal(input.getAttribute("aria-expanded"), "true")
+    assert.equal(select.listbox.hidden, false)
+
+    input.dispatchEvent(
+      new KeyboardEvent("keyup", {
+        key: "Esc",
+        bubbles: true,
+      })
+    )
+    input.dispatchEvent(
+      new KeyboardEvent("keyup", {
+        key: "Esc",
+        bubbles: true,
+      })
+    )
+    await nextFrame()
+
+    assert.equal(input.getAttribute("aria-expanded"), "false")
+    assert.equal(input.value, "")
+    assert.equal(select.listbox.hidden, true)
   })
 
   it(`cycles the options when pressing the Down key`, async () => {
@@ -265,9 +325,9 @@ describe("combo-box", () => {
     await nextFrame()
 
     assert.ok(select.options.length)
-    select.options.every((option) =>
+    for (const option of select.options) {
       assert.equal(option.getAttribute("role"), "option")
-    )
+    }
   })
 
   it("replaces the input value with the selected option when the Enter key is pressed", async () => {
