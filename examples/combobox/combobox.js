@@ -106,7 +106,7 @@ export const ComboBox = ({ optionTemplate, options = [] }) => {
               }
             }
           },
-          keyup: (event, store) => {
+          keyup: async (event, store) => {
             const { key } = event
 
             switch (key) {
@@ -117,7 +117,8 @@ export const ComboBox = ({ optionTemplate, options = [] }) => {
               case "Down":
               case "ArrowDown": {
                 store.dispatch("openListbox")
-                store.dispatch("selectNextOption")
+                await store.dispatch("selectNextOption")
+                // @todo: scroll into view using ref
                 break
               }
               case "Up":

@@ -275,12 +275,14 @@ function Store({
   getState: getStateWrapper = (v) => v,
 }) {
   let state;
-  let nextTickSubscribers = [];
+  let nextTickCallbacks = [];
 
   const message = Message({
     postPublish: () => {
-      nextTickSubscribers.forEach((fn) => fn(state));
-      nextTickSubscribers = [];
+      nextTickCallbacks.forEach((fn) => {
+        fn();
+      });
+      nextTickCallbacks = [];
     },
   });
 
@@ -302,6 +304,12 @@ function Store({
       set(x);
       transition();
     }
+
+    const promise = new Promise((resolve) => {
+      nextTickCallbacks.push(resolve);
+    });
+
+    return promise
   }
 
   return {

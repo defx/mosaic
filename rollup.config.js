@@ -10,13 +10,6 @@ export default [
   },
   {
     input: "src/define.js",
-    output: {
-      file: "examples/mosaic.js",
-      format: "es",
-    },
-  },
-  {
-    input: "src/define.js",
     plugins: [terser()],
     output: {
       file: "dist/mosaic.min.js",
