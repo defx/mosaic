@@ -1,10 +1,10 @@
 import { listItems, listData, listSync } from "./list.js"
 import { write } from "./xo.js"
 
-export function initialise(rootNode, subscribe, config, store, state = {}) {
+export function initialise(rootNode, config, store) {
   const event = {}
-
   const { elements = [] } = config
+  let { state = {} } = config
 
   // derive initial state from input directives...
   elements
@@ -94,7 +94,6 @@ export function initialise(rootNode, subscribe, config, store, state = {}) {
     })
   }
 
-  subscribe(onChange)
-
-  return state
+  store.subscribe(onChange)
+  store.set(state)
 }

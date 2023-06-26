@@ -1,3 +1,5 @@
+import { Message } from "./message.js"
+
 function debounce(fn) {
   let id
   return (...args) => {
@@ -13,12 +15,20 @@ function debounce(fn) {
 export function Store({
   action: actionHandlers = {},
   getState: getStateWrapper = (v) => v,
-  onChangeCallback,
-  api = {},
 }) {
   let state
+  let nextTickSubscribers = []
 
-  const transition = debounce(() => onChangeCallback(getState()))
+  const message = Message({
+    postPublish: () => {
+      nextTickSubscribers.forEach((fn) => fn(state))
+      nextTickSubscribers = []
+    },
+  })
+
+  const transition = debounce(() => {
+    message.publish(getState())
+  })
 
   function set(o) {
     state = getStateWrapper({ ...o })
@@ -43,7 +53,10 @@ export function Store({
       set({ ...getState(), ...o })
       transition()
     },
-    set,
-    ...api,
+    set: (o) => {
+      set(o)
+      message.publish(getState())
+    },
+    subscribe: message.subscribe,
   }
 }

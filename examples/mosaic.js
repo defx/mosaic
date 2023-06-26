@@ -148,10 +148,10 @@ const write = (node, attrs) => {
   return node
 };
 
-function initialise(rootNode, subscribe, config, store, state = {}) {
+function initialise(rootNode, config, store) {
   const event = {};
-
   const { elements = [] } = config;
+  let { state = {} } = config;
 
   // derive initial state from input directives...
   elements
@@ -241,10 +241,22 @@ function initialise(rootNode, subscribe, config, store, state = {}) {
     });
   };
 
-  subscribe(onChange);
-
-  return state
+  store.subscribe(onChange);
+  store.set(state);
 }
+
+const Message = (callbacks) => {
+  const subscribers = [];
+  return {
+    subscribe(fn) {
+      subscribers.push(fn);
+    },
+    publish(...args) {
+      subscribers.forEach((fn) => fn(...args));
+      callbacks.postPublish?.();
+    },
+  }
+};
 
 function debounce(fn) {
   let id;
@@ -261,12 +273,20 @@ function debounce(fn) {
 function Store({
   action: actionHandlers = {},
   getState: getStateWrapper = (v) => v,
-  onChangeCallback,
-  api = {},
 }) {
   let state;
+  let nextTickSubscribers = [];
 
-  const transition = debounce(() => onChangeCallback(getState()));
+  const message = Message({
+    postPublish: () => {
+      nextTickSubscribers.forEach((fn) => fn(state));
+      nextTickSubscribers = [];
+    },
+  });
+
+  const transition = debounce(() => {
+    message.publish(getState());
+  });
 
   function set(o) {
     state = getStateWrapper({ ...o });
@@ -291,22 +311,22 @@ function Store({
       set({ ...getState(), ...o });
       transition();
     },
-    set,
-    ...api,
+    set: (o) => {
+      set(o);
+      message.publish(getState());
+    },
+    subscribe: message.subscribe,
   }
 }
 
-const Message = (callbacks) => {
-  const subscribers = [];
-  return {
-    subscribe(fn) {
-      subscribers.push(fn);
-    },
-    publish(...args) {
-      subscribers.forEach((fn) => fn(...args));
-      callbacks.postPublish?.();
-    },
-  }
+const Mosaic = (node, config) => {
+  const store = Store({
+    ...config,
+  });
+
+  initialise(node, config, store);
+
+  return store
 };
 
 const define = (name, configFn) => {
@@ -316,68 +336,14 @@ const define = (name, configFn) => {
     name,
     class extends HTMLElement {
       async connectedCallback() {
-        let nextTickSubscribers = [];
         const config = configFn(this);
 
-        const api = {
-          nextTick: (fn) => nextTickSubscribers.push(fn),
-        };
-
-        const message = Message({
-          postPublish: () => {
-            nextTickSubscribers.forEach((fn) => fn(state));
-            nextTickSubscribers = [];
-          },
-        });
-
+        // @todo: reflection
         const observed = new Set();
 
-        // const wrap = (state) => {
-        //   return new Proxy(state, {
-        //     get(_, name) {
-        //       console.log("GET", { name, observed })
-        //       if (observed.has(name) === false) {
-        //         Object.defineProperty(host, name, {
-        //           get() {
-        //             return getState()[name]
-        //           },
-        //           set(value) {
-        //             merge({ [name]: value })
-        //           },
-        //         })
+        const store = Mosaic(this, config);
 
-        //         observed.add(name)
-        //       }
-        //       return Reflect.get(...arguments)
-        //     },
-        //   })
-        // }
-
-        const onChangeCallback = (state) => {
-          // message.publish(wrap(state), config)
-          message.publish(state, config);
-        };
-
-        const store = Store({
-          ...config,
-          api,
-          onChangeCallback,
-        });
-
-        const { getState, merge } = store;
-
-        const initialState = initialise(
-          this,
-          message.subscribe,
-          config,
-          store,
-          ((state) => (typeof state === "function" ? state({}) : state))(
-            config.state || {}
-          )
-        );
-
-        store.set(initialState);
-        onChangeCallback(store.getState());
+        const { merge } = store;
 
         const sa = this.setAttribute;
         this.setAttribute = (name, value) => {
@@ -393,8 +359,6 @@ const define = (name, configFn) => {
           }
           return ra.apply(this, [name])
         };
-
-        config.connectedCallback?.(this, store);
       }
     }
   );

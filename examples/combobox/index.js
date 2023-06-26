@@ -1,4 +1,4 @@
-import { define } from "../mosaic.js"
+import { define } from "../../src/define.js"
 import { ComboBox } from "./combobox.js"
 
 const states =
