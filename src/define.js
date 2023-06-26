@@ -36,7 +36,7 @@ export const define = (name, configFn) => {
           onChangeCallback,
         })
 
-        const { getState, merge } = store
+        const { merge } = store
 
         const initialState = initialise(
           this,
@@ -65,8 +65,6 @@ export const define = (name, configFn) => {
           }
           return ra.apply(this, [name])
         }
-
-        config.connectedCallback?.(this, store)
       }
     }
   )
