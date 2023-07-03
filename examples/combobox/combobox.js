@@ -83,12 +83,13 @@ export const ComboBox = ({ optionTemplate, options = [] }) => {
     },
     elements: [
       {
-        select: `[role="combobox"]`,
+        select: `input[type="text"]`,
         attribute: ({ filteredOptions = [], selectedOption, listboxOpen }) => ({
           ariaAutocomplete: "list",
           ariaExpanded: listboxOpen,
           ariaControls: listBoxId,
           ariaActivedescendant: filteredOptions[selectedOption]?.id || "",
+          role: "combobox",
         }),
         input: "searchText",
         on: {

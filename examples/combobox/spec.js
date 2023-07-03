@@ -25,10 +25,6 @@ describe("combo-box", () => {
   })
 
   afterEach(() => {
-    if (window.location.search.startsWith("?grep=")) {
-      // when the window is open on a particular test, keep the node in tact for visual debugging...
-      return
-    }
     document.body.removeChild(rootNode)
   })
 
@@ -58,7 +54,7 @@ describe("combo-box", () => {
       return document.querySelector(`combobox-example`)
     },
     get input() {
-      return document.querySelector(`[role="combobox"]`)
+      return document.querySelector(`input[type=text][role=combobox]`)
     },
     get listbox() {
       return document.querySelector(`[role=listbox]`)
