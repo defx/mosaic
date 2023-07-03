@@ -9,27 +9,37 @@ export const define = (name, configFn) => {
       async connectedCallback() {
         const config = configFn(this)
 
-        // @todo: reflection
-        const observed = new Set()
+        const { observedAttributes = [] } = config
 
         const store = Mosaic(this, config)
 
-        const { merge } = store
+        const { getState, merge } = store
 
         const sa = this.setAttribute
         this.setAttribute = (name, value) => {
-          if (observed.has(name)) {
+          if (observedAttributes.includes(name)) {
             merge({ [name]: value })
           }
           return sa.apply(this, [name, value])
         }
         const ra = this.removeAttribute
         this.removeAttribute = (name) => {
-          if (observed.has(name)) {
+          if (observedAttributes.includes(name)) {
             merge({ [name]: null })
           }
           return ra.apply(this, [name])
         }
+
+        observedAttributes.forEach((name) => {
+          Object.defineProperty(this, name, {
+            get() {
+              return getState()[name]
+            },
+            set(value) {
+              merge({ [name]: value })
+            },
+          })
+        })
       }
     }
   )
