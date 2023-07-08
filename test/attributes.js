@@ -41,7 +41,7 @@ describe("attribution", () => {
       state: {
         expanded: false,
       },
-      action: {
+      actions: {
         toggle: (state) => ({
           expanded: !state.expanded,
         }),

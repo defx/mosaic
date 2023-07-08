@@ -14,7 +14,7 @@ export const ComboBox =
         listboxOpen: false,
         filteredOptions: options,
       },
-      action: {
+      actions: {
         replaceSearchTextWithSelectedOption: (state) => {
           const { selectedOption, filteredOptions, searchText } = state
 

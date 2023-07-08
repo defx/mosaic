@@ -6,7 +6,7 @@ export const Tabs = ({ $$ }) => {
       selectedTab: 0,
       numTabs: $$(TABS).length,
     },
-    action: {
+    actions: {
       selectNextTab: (state) => {
         const { selectedTab, tabs } = state
         return {

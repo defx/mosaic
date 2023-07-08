@@ -6,7 +6,7 @@ export const Accordion = () => {
     state: {
       openPanel: 0,
     },
-    action: {
+    actions: {
       togglePanel: (state, i) => ({
         ...state,
         openPanel: state.openPanel === i ? -1 : i,

@@ -40,7 +40,7 @@ describe("navigation menu enhancement", () => {
       state: {
         menuIsOpen: false,
       },
-      action: {
+      actions: {
         toggleMenu: (state) => {
           return {
             ...state,

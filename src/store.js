@@ -13,7 +13,7 @@ function debounce(fn) {
 }
 
 export function Store({
-  action: actionHandlers = {},
+  actions: actionHandlers = {},
   getState: getStateWrapper = (v) => v,
 }) {
   let state
