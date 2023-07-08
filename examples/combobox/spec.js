@@ -102,8 +102,6 @@ describe("combo-box", () => {
     mount()
     const { listbox } = select
 
-    // is labelledby a legitimate case here?
-
     const isLabelled = listbox.hasAttribute("aria-label")
     assert.ok(isLabelled)
   })
