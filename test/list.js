@@ -1,4 +1,4 @@
-import { $ } from "../src/index.js"
+import { Mosaic } from "../src/index.js"
 
 xdescribe("list sorting", () => {
   let rootNode
@@ -35,7 +35,7 @@ xdescribe("list sorting", () => {
       priceHighToLow: (a, b) => b.price - a.price,
     }
 
-    $(rootNode, {
+    Mosaic(rootNode, {
       getState: (state) => {
         return {
           ...state,
@@ -110,7 +110,7 @@ xdescribe("list sorting", () => {
       priceHighToLow: (a, b) => b.price - a.price,
     }
 
-    $(rootNode, {
+    Mosaic(rootNode, {
       getState: (state) => {
         return {
           ...state,

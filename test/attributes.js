@@ -1,4 +1,4 @@
-import { $ } from "../src/index.js"
+import { Mosaic } from "../src/index.js"
 
 describe("attribution", () => {
   let rootNode
@@ -15,7 +15,7 @@ describe("attribution", () => {
   it("initialises the attributes", () => {
     rootNode.innerHTML = html`<button hidden>[+]</button>`
 
-    $(rootNode, {
+    Mosaic(rootNode, {
       elements: [
         {
           select: "button",
@@ -37,7 +37,7 @@ describe("attribution", () => {
   it("updates the attributes", async () => {
     rootNode.innerHTML = html`<button hidden>[+]</button>`
 
-    $(rootNode, {
+    Mosaic(rootNode, {
       state: {
         expanded: false,
       },
@@ -73,7 +73,7 @@ describe("attribution", () => {
   it("initialises the attribute of multiple matches", () => {
     rootNode.innerHTML = html`<button>[+]</button><button>[+]</button
       ><button>[+]</button><button>[+]</button>`
-    $(rootNode, {
+    Mosaic(rootNode, {
       elements: [
         {
           select: "button",

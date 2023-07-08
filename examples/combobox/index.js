@@ -9,9 +9,12 @@ const states =
 const optionTemplate = ({ id, value }) =>
   `<li id="${id}" role="option">${value}</li>`
 
-define("combobox-example", () => {
-  return ComboBox({
-    optionTemplate,
-    options: states,
-  })
+define("combobox-example", (api) => {
+  return ComboBox(
+    {
+      optionTemplate,
+      options: states,
+    },
+    api
+  )
 })

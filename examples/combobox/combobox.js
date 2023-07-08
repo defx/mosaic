@@ -1,6 +1,6 @@
 let counter = 0
 
-export const ComboBox = ({ optionTemplate, options = [] }) => {
+export const ComboBox = ({ optionTemplate, options = [] }, { $$ }) => {
   const id = counter++
   const listBoxId = `listbox_${id}`
 
@@ -119,12 +119,15 @@ export const ComboBox = ({ optionTemplate, options = [] }) => {
               case "ArrowDown": {
                 store.dispatch("openListbox")
                 await store.dispatch("selectNextOption")
-                // @todo: scroll into view using ref
+                const { selectedOption = 0 } = store.getState()
+                $$(`[role="option"]`)[selectedOption]?.scrollIntoView()
                 break
               }
               case "Up":
               case "ArrowUp": {
                 store.dispatch("selectPreviousOption")
+                const { selectedOption = 0 } = store.getState()
+                $$(`[role="option"]`)[selectedOption]?.scrollIntoView()
                 break
               }
               case "Esc":

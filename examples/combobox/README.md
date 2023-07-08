@@ -4,5 +4,4 @@ The combobox for choosing the name of a US state or territory illustrates the Co
 
 ## Todo
 
-- optional combobox button
-- behaviours marked as "optional"
+- combobox button

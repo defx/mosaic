@@ -7,9 +7,9 @@ export const Accordion = () => {
       openPanel: 0,
     },
     action: {
-      togglePanel: (state, { index }) => ({
+      togglePanel: (state, i) => ({
         ...state,
-        openPanel: state.openPanel === index ? -1 : index,
+        openPanel: state.openPanel === i ? -1 : i,
       }),
     },
     elements: [

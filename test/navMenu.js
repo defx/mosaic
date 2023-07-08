@@ -1,4 +1,4 @@
-import { $ } from "../src/index.js"
+import { Mosaic } from "../src/index.js"
 
 describe("navigation menu enhancement", () => {
   let rootNode
@@ -36,7 +36,7 @@ describe("navigation menu enhancement", () => {
       </nav>
     `
 
-    $(rootNode, {
+    Mosaic(rootNode, {
       state: {
         menuIsOpen: false,
       },
