@@ -8,18 +8,18 @@ export function initialise(rootNode, config, store) {
 
   // derive initial state from input directives...
   elements
-    .filter(({ input }) => input)
-    .forEach(({ select, input }) => {
+    .filter(({ sync }) => sync)
+    .forEach(({ select, sync }) => {
       const targets = [...rootNode.querySelectorAll(select)]
       targets.forEach((target) => {
-        state = { ...state, [input]: target.value }
+        state = { ...state, [sync]: target.value }
 
         event.input = event.input || []
         event.input.push({
           select,
           callback: (event) => {
             const { target } = event
-            store.merge({ [input]: target.value })
+            store.merge({ [sync]: target.value })
           },
         })
       })
@@ -77,7 +77,7 @@ export function initialise(rootNode, config, store) {
 
     // then the rest...
     elements.forEach((c) => {
-      const { select, attribute, input } = c
+      const { select, attribute, sync } = c
 
       const targets = [...rootNode.querySelectorAll(select)]
 
@@ -85,8 +85,8 @@ export function initialise(rootNode, config, store) {
         if (attribute) {
           write(target, attribute(state, i))
         }
-        if (input) {
-          const value = state[input]
+        if (sync) {
+          const value = state[sync]
 
           if (target.value !== value) target.value = value
         }

@@ -97,7 +97,7 @@ export const ComboBox =
             ariaActivedescendant: filteredOptions[selectedOption]?.id || "",
             role: "combobox",
           }),
-          input: "searchText",
+          sync: "searchText",
           on: {
             input: (_, store) => {
               store.dispatch("onSearchInput")
