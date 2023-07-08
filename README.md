@@ -53,14 +53,13 @@ export const Accordion = () => {
           id: `panel_${id}_${i}`,
           ariaLabelledby: `trigger_${id}_${i}`,
           hidden: state.openPanel !== i,
+          role: "region",
         }),
       },
     ],
   }
 }
 ```
-
-As you can see from the example above, the behaviour is described separately from the markup. This separation of concerns allows the same behaviour to be reused with custom HTML markup and styles fitting the requirements of a specific project. The only restrictions upon markup are imposed by the _selectors_. Generally these selectors are just custom attributes (e.g., `[accordion-panel]`) that aren't tied to any specific element type. In some cases however, more specificity may be employed to ensure accessibility (as seen with the `button[accordion-toggle]` selector in the example above).
 
 ## Install
 
@@ -81,4 +80,4 @@ import { define } from "https://unpkg.com/mosaic"
 The current plan is that the Mosaic project will broadly consist of two parts:
 
 1. The core library, which can be used to configure and define Mosaics behavioural components
-2. A suite of behavioural components implementing the most common pattern of the web. These will be largely influenced by those described in the ARIA Patterns Guide (APG).
+2. A suite of behavioural components implementing the most common Web UI patterns

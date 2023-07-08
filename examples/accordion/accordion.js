@@ -30,6 +30,7 @@ export const Accordion = () => {
           id: `panel_${id}_${i}`,
           ariaLabelledby: `trigger_${id}_${i}`,
           hidden: state.openPanel !== i,
+          role: "region",
         }),
       },
     ],
