@@ -1,4 +1,4 @@
-import { castAll, nodeFromString } from "./helpers.js"
+import { nodeFromString } from "./helpers.js"
 
 export function listItems(listContainerNode, listItemSelector) {
   return [...listContainerNode.children].filter((node) =>
@@ -7,9 +7,8 @@ export function listItems(listContainerNode, listItemSelector) {
 }
 
 export function listData(listItems) {
-  return listItems.map((node) => ({
-    id: node.id,
-    ...castAll(node.dataset),
+  return listItems.map(({ id }) => ({
+    id,
   }))
 }
 
