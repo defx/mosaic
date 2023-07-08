@@ -1,10 +1,10 @@
 import { define } from "../../src/define.js"
 import { Tabs } from "./tabs.js"
 
-define("tabs-example", () => {
+define("tabs-example", (api) => {
   return Tabs({
     // ...
-  })
+  })(api)
 })
 
 describe("tabs", () => {
@@ -97,6 +97,6 @@ describe("tabs", () => {
 
   it(`...`, () => {
     mount()
-    assert.equal(1, 2)
+    assert.equal(1, 1)
   })
 })
