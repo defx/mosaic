@@ -1,6 +1,6 @@
 const TABS = `button[role="tab"]`
 
-export const Tabs = (_, { $$ }) => {
+export const Tabs = ({ $$ }) => {
   return {
     state: {
       selectedTab: 0,
