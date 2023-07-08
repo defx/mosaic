@@ -45,17 +45,17 @@ export function initialise(rootNode, config, store) {
       listeners
         .filter(({ select }) => e.target.matches(select))
         .forEach(({ select, callback }) => {
+          const { target } = e
+
+          const targets = [...rootNode.querySelectorAll(select)]
+
+          const index = targets.indexOf(target)
+
           if (typeof callback === "function") {
-            callback(e, store)
+            callback(e, store, index)
           }
           if (typeof callback === "string") {
-            const { target } = e
-
-            const targets = [...rootNode.querySelectorAll(select)]
-
-            const index = targets.indexOf(target)
-
-            store.dispatch(callback, { event: e, index })
+            store.dispatch(callback, index)
           }
         })
     })
