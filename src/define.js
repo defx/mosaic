@@ -7,7 +7,10 @@ export const define = (name, configFn) => {
     name,
     class extends HTMLElement {
       async connectedCallback() {
-        const config = configFn(this)
+        const config = configFn({
+          $: (q) => this.querySelector(q),
+          $$: (q) => Array.from(this.querySelectorAll(q)),
+        })
 
         const { observedAttributes = [] } = config
 
