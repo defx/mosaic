@@ -46,9 +46,11 @@ export function initialise(rootNode, config, store) {
     })
 
   // find event listeners
-  elements.forEach((c) => {
-    const { on, scope } = c
-    if (on) {
+  elements
+    .filter(({ on }) => on)
+    .forEach((c) => {
+      const { on, scope } = c
+
       Object.entries(on).forEach(([type, callback]) => {
         const k = `${scope}:${type}`
         event[k] = event[k] || []
@@ -57,8 +59,7 @@ export function initialise(rootNode, config, store) {
           callback,
         })
       })
-    }
-  })
+    })
 
   // delegate from the root node
   Object.entries(event).forEach(([k, listeners]) => {
@@ -69,9 +70,7 @@ export function initialise(rootNode, config, store) {
         .filter(({ select }) => e.target.matches(select))
         .forEach(({ callback, getNodes }) => {
           const { target } = e
-
           const targets = getNodes()
-
           const index = targets.indexOf(target)
 
           if (typeof callback === "function") {
