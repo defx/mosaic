@@ -31,24 +31,18 @@ export const ComboBox =
             filteredOptions: [],
           }
         },
-        clearSearchInput: (state) => {
-          return {
-            ...state,
-            searchText: "",
-          }
-        },
-        openListbox: (state) => {
-          return {
-            ...state,
-            listboxOpen: true,
-          }
-        },
-        closeListbox: (state) => {
-          return {
-            ...state,
-            listboxOpen: false,
-          }
-        },
+        clearSearchInput: (state) => ({
+          ...state,
+          searchText: "",
+        }),
+        openListbox: (state) => ({
+          ...state,
+          listboxOpen: true,
+        }),
+        closeListbox: (state) => ({
+          ...state,
+          listboxOpen: false,
+        }),
         selectNextOption: (state) => {
           const { filteredOptions, selectedOption } = state
           return {
