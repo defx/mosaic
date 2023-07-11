@@ -4,34 +4,39 @@ import { write } from "./xo.js"
 const matchGlobalSelector = (q) => q.match(/^:global\(([^)].+)\)$/)?.[1]
 
 export function initialise(rootNode, config, store) {
-  const event = {}
-
   let { state = {} } = config
-
-  const elements = (config.elements || []).map((o) => {
-    const { select } = o
-
+  const elements = (config.elements || []).map((v) => {
+    let select = v.select || v.selectAll
     const globalSelector = matchGlobalSelector(select)
-
+    select = globalSelector || select
     return {
-      ...o,
-      select: globalSelector || select,
-      contextNode: globalSelector ? document.body : rootNode,
+      ...v,
+      select,
+      getNodes: () => {
+        const contextNode = globalSelector ? document.body : rootNode
+        if (v.select) {
+          return [contextNode.querySelector(select)]
+        } else if (v.selectAll) {
+          return [...contextNode.querySelectorAll(select)]
+        }
+      },
       scope: globalSelector ? "global" : "local",
     }
   })
+  const event = {}
 
   // derive initial state from input directives...
   elements
     .filter(({ sync }) => sync)
-    .forEach(({ select, sync }) => {
-      const targets = [...rootNode.querySelectorAll(select)]
+    .forEach((c) => {
+      const { sync, getNodes } = c
+      const targets = getNodes()
       targets.forEach((target) => {
         state = { ...state, [sync]: target.value }
 
         event["local:input"] = event["local:input"] || []
         event["local:input"].push({
-          select,
+          ...c,
           callback: (event) => {
             const { target } = event
             store.merge({ [sync]: target.value })
@@ -62,9 +67,11 @@ export function initialise(rootNode, config, store) {
     contextNode.addEventListener(type, (e) => {
       listeners
         .filter(({ select }) => e.target.matches(select))
-        .forEach(({ select, callback }) => {
+        .forEach(({ callback, getNodes }) => {
           const { target } = e
-          const targets = [...contextNode.querySelectorAll(select)]
+
+          const targets = getNodes()
+
           const index = targets.indexOf(target)
 
           if (typeof callback === "function") {
@@ -93,9 +100,9 @@ export function initialise(rootNode, config, store) {
 
     // then the rest...
     elements.forEach((c) => {
-      const { select, attribute, sync, contextNode } = c
+      const { select, attribute, sync, getNodes } = c
 
-      const targets = [...contextNode.querySelectorAll(select)]
+      const targets = getNodes()
 
       targets.forEach((target, i) => {
         if (attribute) {
