@@ -40,9 +40,11 @@ export function initialise(rootNode, config, store) {
     })
 
   // find event listeners
-  elements.forEach((c) => {
-    const { select, on } = c
-    if (on) {
+  elements
+    .filter(({ on }) => on)
+    .forEach((c) => {
+      const { on } = c
+
       Object.entries(on).forEach(([type, callback]) => {
         event[type] = event[type] || []
         event[type].push({
@@ -50,8 +52,7 @@ export function initialise(rootNode, config, store) {
           callback,
         })
       })
-    }
-  })
+    })
 
   // delegate from the root node
   Object.entries(event).forEach(([type, listeners]) => {
