@@ -1,10 +1,25 @@
 import { listItems, listData, listSync } from "./list.js"
 import { write } from "./xo.js"
 
+const matchGlobalSelector = (q) => q.match(/^:global\(([^)].+)\)$/)?.[1]
+
 export function initialise(rootNode, config, store) {
   const event = {}
-  const { elements = [] } = config
+
   let { state = {} } = config
+
+  const elements = (config.elements || []).map((o) => {
+    const { select } = o
+
+    const globalSelector = matchGlobalSelector(select)
+
+    return {
+      ...o,
+      select: globalSelector || select,
+      contextNode: globalSelector ? document.body : rootNode,
+      scope: globalSelector ? "global" : "local",
+    }
+  })
 
   // derive initial state from input directives...
   elements
@@ -14,8 +29,8 @@ export function initialise(rootNode, config, store) {
       targets.forEach((target) => {
         state = { ...state, [sync]: target.value }
 
-        event.input = event.input || []
-        event.input.push({
+        event["local:input"] = event["local:input"] || []
+        event["local:input"].push({
           select,
           callback: (event) => {
             const { target } = event
@@ -27,28 +42,31 @@ export function initialise(rootNode, config, store) {
 
   // find event listeners
   elements.forEach((c) => {
-    const { select, on } = c
+    const { on, scope } = c
     if (on) {
       Object.entries(on).forEach(([type, callback]) => {
-        event[type] = event[type] || []
-        event[type].push({
-          select,
+        const k = `${scope}:${type}`
+        event[k] = event[k] || []
+        event[k].push({
+          ...c,
           callback,
         })
       })
     }
   })
 
+  // @todo: replace matches/iteration with weakmap
+
   // delegate from the root node
-  Object.entries(event).forEach(([type, listeners]) => {
-    rootNode.addEventListener(type, (e) => {
+  Object.entries(event).forEach(([k, listeners]) => {
+    const [scope, type] = k.split(":")
+    const contextNode = scope === "global" ? document.body : rootNode
+    contextNode.addEventListener(type, (e) => {
       listeners
         .filter(({ select }) => e.target.matches(select))
         .forEach(({ select, callback }) => {
           const { target } = e
-
-          const targets = [...rootNode.querySelectorAll(select)]
-
+          const targets = [...contextNode.querySelectorAll(select)]
           const index = targets.indexOf(target)
 
           if (typeof callback === "function") {
@@ -77,9 +95,9 @@ export function initialise(rootNode, config, store) {
 
     // then the rest...
     elements.forEach((c) => {
-      const { select, attribute, sync } = c
+      const { select, attribute, sync, contextNode } = c
 
-      const targets = [...rootNode.querySelectorAll(select)]
+      const targets = [...contextNode.querySelectorAll(select)]
 
       targets.forEach((target, i) => {
         if (attribute) {

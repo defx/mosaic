@@ -2,7 +2,7 @@ let counter = 0
 
 export const ComboBox =
   ({ optionTemplate, options = [] }) =>
-  ({ $$ }) => {
+  ({ rootNode, $$ }) => {
     const id = counter++
     const listBoxId = `listbox_${id}`
 
@@ -84,6 +84,15 @@ export const ComboBox =
         },
       },
       elements: [
+        {
+          select: ":global(body)",
+          on: {
+            pointerup: (e, store) => {
+              if (rootNode.contains(e.target)) return
+              store.dispatch("closeListbox")
+            },
+          },
+        },
         {
           select: `input[type="text"]`,
           attribute: ({
