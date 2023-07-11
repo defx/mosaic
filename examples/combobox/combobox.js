@@ -13,8 +13,11 @@ export const ComboBox =
         selectedOption: -1,
         listboxOpen: false,
         filteredOptions: options,
+        pointerOver: false,
       },
       actions: {
+        pointerOver: (state) => ({ ...state, pointerOver: true }),
+        pointerOut: (state) => ({ ...state, pointerOver: false }),
         replaceSearchTextWithSelectedOption: (state) => {
           const { selectedOption, filteredOptions, searchText } = state
 
@@ -87,10 +90,20 @@ export const ComboBox =
         {
           select: ":global(body)",
           on: {
-            pointerup: (e, store) => {
+            pointerup: (e, { getState, dispatch }) => {
               if (rootNode.contains(e.target)) return
-              store.dispatch("closeListbox")
+              setTimeout(() => {
+                const { pointerOver } = getState()
+                if (pointerOver === false) dispatch("closeListbox")
+              }, 300)
             },
+          },
+        },
+        {
+          select: ":self",
+          on: {
+            pointerover: "pointerOver",
+            pointerout: "pointerOut",
           },
         },
         {

@@ -15,7 +15,9 @@ export function initialise(rootNode, config, store) {
       getNodes: () => {
         const contextNode = globalSelector ? document.body : rootNode
         if (v.select) {
-          return [contextNode.querySelector(select)]
+          return v.select === ":self"
+            ? [rootNode]
+            : [contextNode.querySelector(select)]
         } else if (v.selectAll) {
           return [...contextNode.querySelectorAll(select)]
         }
@@ -67,7 +69,7 @@ export function initialise(rootNode, config, store) {
     const contextNode = scope === "global" ? document.body : rootNode
     contextNode.addEventListener(type, (e) => {
       listeners
-        .filter(({ select }) => e.target.matches(select))
+        .filter(({ select }) => select === ":self" || e.target.matches(select))
         .forEach(({ callback, getNodes }) => {
           const { target } = e
           const targets = getNodes()
@@ -87,8 +89,8 @@ export function initialise(rootNode, config, store) {
     // lists first
     elements
       .filter(({ list }) => list)
-      .forEach(({ select, list }) => {
-        const targets = [...rootNode.querySelectorAll(select)]
+      .forEach(({ list, getNodes }) => {
+        const targets = getNodes()
         targets.forEach((target) => {
           const items = listItems(target, list.select)
           const curr = listData(items)
@@ -99,7 +101,7 @@ export function initialise(rootNode, config, store) {
 
     // then the rest...
     elements.forEach((c) => {
-      const { select, attribute, sync, getNodes } = c
+      const { attribute, sync, getNodes } = c
 
       const targets = getNodes()
 
