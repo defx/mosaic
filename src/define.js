@@ -8,6 +8,7 @@ export const define = (name, configFn) => {
     class extends HTMLElement {
       async connectedCallback() {
         const config = configFn({
+          rootNode: this,
           $: (q) => this.querySelector(q),
           $$: (q) => Array.from(this.querySelectorAll(q)),
         })
