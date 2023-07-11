@@ -37,7 +37,7 @@ export const Accordion = () => {
     },
     elements: [
       {
-        select: "button[accordion-toggle]",
+        selectAll: "button[accordion-toggle]",
         attribute: (state, i) => ({
           id: `trigger_${id}_${i}`,
           ariaControls: `panel_${id}_${i}`,
@@ -48,7 +48,7 @@ export const Accordion = () => {
         },
       },
       {
-        select: "[accordion-panel]",
+        selectAll: "[accordion-panel]",
         attribute: (state, i) => ({
           id: `panel_${id}_${i}`,
           ariaLabelledby: `trigger_${id}_${i}`,
