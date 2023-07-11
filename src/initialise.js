@@ -55,8 +55,6 @@ export function initialise(rootNode, config, store) {
     }
   })
 
-  // @todo: replace matches/iteration with weakmap
-
   // delegate from the root node
   Object.entries(event).forEach(([k, listeners]) => {
     const [scope, type] = k.split(":")
