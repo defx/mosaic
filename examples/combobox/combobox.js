@@ -181,11 +181,9 @@ export const ComboBox =
         },
         {
           selectAll: "[role=option]",
-          attribute: ({ selectedOption }, i) => {
-            return {
-              ariaSelected: selectedOption === i,
-            }
-          },
+          attribute: ({ selectedOption }, i) => ({
+            ariaSelected: selectedOption === i,
+          }),
         },
       ],
     }
