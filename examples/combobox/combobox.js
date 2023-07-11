@@ -164,7 +164,7 @@ export const ComboBox =
           },
         },
         {
-          select: "[role=option]",
+          selectAll: "[role=option]",
           attribute: ({ selectedOption }, i) => {
             return {
               ariaSelected: selectedOption === i,
