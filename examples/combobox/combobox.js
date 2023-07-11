@@ -94,7 +94,7 @@ export const ComboBox =
           },
         },
         {
-          select: `input[type="text"]`,
+          select: `input[type=text]`,
           attribute: ({
             filteredOptions = [],
             selectedOption,

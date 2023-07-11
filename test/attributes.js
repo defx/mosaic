@@ -76,7 +76,7 @@ describe("attribution", () => {
     Mosaic(rootNode, {
       elements: [
         {
-          select: "button",
+          selectAll: "button",
           attribute: () => ({
             ariaExpanded: false,
           }),
