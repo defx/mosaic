@@ -2,7 +2,7 @@
 
 ## Accelerate your UI development
 
-🚧 Please kindly note that this project is a work in progress. Collaborators welcome. To understand where we're going, please check the Roadmap 🚧
+🚧 Please kindly note that this project is a work in progress. 🚧
 
 ## Mosaic allows authors to write once and run anywhere
 
@@ -21,10 +21,10 @@ highly performant, accessible, and fully tested straight out of the box, letting
 The following configuration implements the Accordion pattern:
 
 ```js
-let counter = 0
+let counter = 0;
 
 export const Accordion = () => {
-  const id = counter++
+  const id = counter++;
   return {
     state: {
       openPanel: 0,
@@ -57,8 +57,8 @@ export const Accordion = () => {
         }),
       },
     ],
-  }
-}
+  };
+};
 ```
 
 ## Install
@@ -66,7 +66,7 @@ export const Accordion = () => {
 ### cdn
 
 ```js
-import { define } from "https://unpkg.com/mosaic"
+import { define } from "https://unpkg.com/mosaic";
 ```
 
 ### npm
@@ -74,10 +74,3 @@ import { define } from "https://unpkg.com/mosaic"
 ```sh
 > npm i mosaic
 ```
-
-## Roadmap
-
-The current plan is that the Mosaic project will broadly consist of two parts:
-
-1. The core library, which can be used to configure and define Mosaics behavioural components
-2. A suite of behavioural components implementing the most common Web UI patterns
