@@ -70,8 +70,7 @@ const rootNode = document.querySelector("[data-accordion]");
 const store = Mosaic(rootNode, Accordion());
 ```
 
-Mosaic enhances the supplied node and returns its state store. It does not
-register custom elements or require a particular root element type.
+Mosaic enhances the supplied node and returns its state store.
 
 ## Install
 
@@ -98,14 +97,8 @@ npm test
 ```
 
 Tests run in headless Chromium through Vitest Browser Mode and Playwright.
-All test dependencies are installed locally; the runner does not load CDN scripts.
 
 - `npm run test:watch` reruns tests as files change. Add `-- --browser.headless=false` to see the browser.
 - `npm run test:coverage` prints source coverage and writes the HTML report to `coverage/index.html`.
 - `node serveExamples.js` serves the examples at [localhost:1983](http://localhost:1983).
 
-Mosaic binds behaviour to existing HTML; it does not render or reconcile lists.
-The combobox example creates its fixed options before binding, then filters them
-with `hidden` while preserving the nodes and their order.
-
-The tabs test is a mounting placeholder; interaction coverage will be added in chunk 7.
