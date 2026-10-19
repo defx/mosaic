@@ -17,6 +17,7 @@ export type {
   MosaicConfig,
   StoreConfig,
   StringKey,
+  SyncKey,
 } from "./types.js"
 
 export const Mosaic = <

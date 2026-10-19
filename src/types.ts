@@ -31,6 +31,10 @@ export type StringKey<State> = {
   [Key in keyof State]-?: State[Key] extends string ? Key : never
 }[keyof State] & string
 
+export type SyncKey<State> = {
+  [Key in keyof State]-?: State[Key] extends string | boolean ? Key : never
+}[keyof State] & string
+
 export interface RenderContext<State extends object> {
   state: State
   element: Element
@@ -60,7 +64,7 @@ export interface ElementConfig<State extends object, Actions = {}> {
   text?: (context: RenderContext<State>) => TextValue
   class?: (context: RenderContext<State>) => Classes | null | undefined
   on?: EventBindings<State, Actions>
-  sync?: StringKey<State>
+  sync?: SyncKey<State>
 }
 
 export interface StoreConfig<

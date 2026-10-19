@@ -1,4 +1,4 @@
-import { Mosaic } from "../../src/index.js"
+import { Mosaic, type SyncKey } from "../../src/index.js"
 
 // Compile-only checks: state and action types must be inferred from ordinary usage.
 const controller = Mosaic(document.createElement("div"), {
@@ -121,11 +121,41 @@ Mosaic(document.createElement("div"), { elements: [{
 }] })
 Mosaic(document.createElement("div"), { state: { count: 0 }, elements: [{
   select: "input",
-  // @ts-expect-error Sync requires a string-valued state key.
+  // @ts-expect-error Sync requires a string or boolean state key.
   sync: "count",
 }] })
 Mosaic(document.createElement("div"), { elements: [{
   select: "input",
   // @ts-expect-error General property bindings are not part of the API.
   property: () => ({ value: "invalid" }),
+}] })
+
+
+const checkboxController = Mosaic(document.createElement("div"), {
+  state: { enabled: false },
+  actions: { enable: (state, enabled: boolean) => ({ ...state, enabled }) },
+  elements: [{
+    select: 'input[type="checkbox"]',
+    sync: "enabled",
+    on: { change: ({ state, getState, dispatch }) => {
+      const enabled: boolean = state.enabled && getState().enabled
+      dispatch("enable", enabled)
+      // @ts-expect-error Checkbox action payloads remain boolean.
+      dispatch("enable", "yes")
+    } },
+  }],
+})
+const enabled: boolean = checkboxController.getState().enabled
+const syncKeys: SyncKey<{ enabled: boolean; query: string; count: number; data: object; values: string[] }>[] = ["enabled", "query"]
+// @ts-expect-error Objects cannot be synced.
+syncKeys.push("data")
+// @ts-expect-error Numbers cannot be synced.
+syncKeys.push("count")
+// @ts-expect-error Array-valued checkbox groups are not supported.
+syncKeys.push("values")
+void enabled
+Mosaic(document.createElement("div"), { state: { data: {} }, elements: [{
+  select: "input",
+  // @ts-expect-error Object-valued state keys cannot be synced.
+  sync: "data",
 }] })

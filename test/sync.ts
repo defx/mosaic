@@ -1,4 +1,5 @@
 import { afterEach, assert, it, vi } from "vitest"
+import { userEvent } from "vitest/browser"
 import { Mosaic } from "../src/index.js"
 import { nextFrame } from "./helpers/browser.js"
 
@@ -187,7 +188,7 @@ it("tracks simultaneous composition per control and removes composition listener
   assert.equal(second.value, "first draft")
 })
 
-it.each(['<input type="checkbox">', '<input type="radio">', '<input type="file">', '<select multiple></select>', '<div></div>'])("rejects unsupported sync targets: %s", (html) => {
+it.each(['<input type="radio">', '<input type="file">', '<select multiple></select>', '<div></div>'])("rejects unsupported sync targets: %s", (html) => {
   const node = root(html)
   assert.throws(() => Mosaic(node, { state: { value: "" }, elements: [{ select: "*", sync: "value" }] }), TypeError)
 })
@@ -208,4 +209,149 @@ it("initialises sync before consumer input handlers in earlier bindings", () => 
   input.dispatchEvent(new Event("input"))
   assert.deepEqual(observed, ["typed"])
   assert.equal(controller.getState().unmatched, "retained")
+})
+
+it.each([true, false])("initialises a checkbox from its live checked property: %s", (checked) => {
+  const node = root('<input type="checkbox" value="custom" checked><output></output>')
+  const input = node.querySelector("input")!
+  input.checked = checked
+  const controller = track(Mosaic(node, {
+    state: { enabled: !checked },
+    elements: [
+      { select: "input", sync: "enabled" },
+      { select: "output", text: ({ state }) => state.enabled },
+    ],
+  }))
+  assert.strictEqual(controller.getState().enabled, checked)
+  assert.equal(node.querySelector("output")!.textContent, String(checked))
+  assert.equal(input.value, "custom")
+})
+
+it("updates checkbox state automatically through real pointer and Space activation", async () => {
+  const node = root('<input type="checkbox"><output></output>')
+  const input = node.querySelector("input")!
+  const controller = track(Mosaic(node, {
+    state: { enabled: false },
+    elements: [
+      { select: "input", sync: "enabled" },
+      { select: "output", text: ({ state }) => state.enabled },
+    ],
+  }))
+  await userEvent.click(input)
+  assert.isTrue(controller.getState().enabled)
+  await nextFrame()
+  assert.equal(node.querySelector("output")!.textContent, "true")
+  input.focus()
+  await userEvent.keyboard(" ")
+  assert.isFalse(controller.getState().enabled)
+  await nextFrame()
+  assert.equal(node.querySelector("output")!.textContent, "false")
+})
+
+it("updates before consumer input/change handlers, including change-only events", () => {
+  const node = root('<input type="checkbox">')
+  const input = node.querySelector("input")!
+  const observed: [string, boolean][] = []
+  const controller = track(Mosaic(node, {
+    state: { enabled: false },
+    elements: [
+      { select: "input", on: {
+        input: ({ state, getState }) => {
+          assert.strictEqual(state.enabled, getState().enabled)
+          observed.push(["input", state.enabled])
+        },
+        change: ({ state }) => { observed.push(["change", state.enabled]) },
+      } },
+      { select: "input", sync: "enabled" },
+    ],
+  }))
+  input.checked = true
+  input.dispatchEvent(new Event("change"))
+  assert.isTrue(controller.getState().enabled)
+  input.checked = false
+  input.dispatchEvent(new Event("input"))
+  input.dispatchEvent(new Event("change"))
+  assert.deepEqual(observed, [["change", true], ["input", false], ["change", false]])
+})
+
+it("writes programmatic checkbox updates without redundant assignments or publications", async () => {
+  const node = root('<input type="checkbox" value="custom">')
+  const input = node.querySelector("input")!
+  input.indeterminate = true
+  const setter = vi.spyOn(input, "checked", "set")
+  const controller = track(Mosaic(node, {
+    state: { enabled: true },
+    actions: { change: (state, enabled: boolean) => ({ ...state, enabled }) },
+    elements: [{ select: "input", sync: "enabled" }],
+  }))
+  const subscriber = vi.fn()
+  controller.subscribe(subscriber)
+  assert.equal(setter.mock.calls.length, 0)
+  await controller.dispatch("change", true)
+  assert.isTrue(input.checked)
+  assert.equal(setter.mock.calls.length, 1)
+  await controller.dispatch("change", true)
+  assert.equal(setter.mock.calls.length, 1)
+  const publications = subscriber.mock.calls.length
+  input.dispatchEvent(new Event("input"))
+  input.dispatchEvent(new Event("change"))
+  await nextFrame()
+  assert.equal(subscriber.mock.calls.length, publications)
+  await controller.dispatch("change", false)
+  assert.isFalse(input.checked)
+  assert.equal(setter.mock.calls.length, 2)
+  assert.equal(input.value, "custom")
+  assert.isTrue(input.indeterminate)
+  assert.isFalse(input.hasAttribute("checked"))
+})
+
+it("mirrors one boolean across checkboxes using the first bound checkbox at mount", async () => {
+  const node = root('<input id="first" type="checkbox" checked><input id="second" type="checkbox">')
+  const [first, second] = node.querySelectorAll("input")
+  const controller = track(Mosaic(node, {
+    state: { enabled: true, unbound: true },
+    actions: { change: (state, enabled: boolean) => ({ ...state, enabled }) },
+    elements: [
+      { select: "#second", sync: "enabled" },
+      { select: "#first", sync: "enabled" },
+      { select: ".missing", sync: "unbound" },
+    ],
+  }))
+  assert.deepEqual(controller.getState(), { enabled: false, unbound: true })
+  assert.isFalse(first.checked)
+  assert.isFalse(second.checked)
+  await userEvent.click(first)
+  await nextFrame()
+  assert.isTrue(second.checked)
+  await controller.dispatch("change", false)
+  assert.isFalse(first.checked)
+  assert.isFalse(second.checked)
+})
+
+it("removes checkbox listeners on destruction and supports rebinding", async () => {
+  const node = root('<input type="checkbox">')
+  const input = node.querySelector("input")!
+  const original = track(Mosaic(node, { state: { enabled: false }, elements: [{ select: "input", sync: "enabled" }] }))
+  original.destroy()
+  input.checked = true
+  input.dispatchEvent(new Event("input"))
+  input.dispatchEvent(new Event("change"))
+  assert.isFalse(original.getState().enabled)
+  const replacement = track(Mosaic(node, { state: { enabled: false }, elements: [{ select: "input", sync: "enabled" }] }))
+  assert.isTrue(replacement.getState().enabled)
+  await userEvent.click(input)
+  assert.isFalse(replacement.getState().enabled)
+  assert.isFalse(original.getState().enabled)
+})
+
+it.each(["checkbox-first", "text-first"])("rejects mixed checkbox/string controls on a shared key and cleans up: %s", (order) => {
+  const node = root('<input id="checkbox" type="checkbox"><input id="text" value="text">')
+  const selectors = order === "checkbox-first" ? ["#checkbox", "#text"] : ["#text", "#checkbox"]
+  const config = {
+    state: { value: false as string | boolean },
+    elements: selectors.map((select) => ({ select, sync: "value" as const })),
+  }
+  const remove = vi.spyOn(node.querySelector(selectors[0])!, "removeEventListener")
+  assert.throws(() => Mosaic(node, config), 'sync key "value" cannot mix checkbox and string controls')
+  assert.isAtLeast(remove.mock.calls.length, 2)
 })

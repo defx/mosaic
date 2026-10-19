@@ -30,33 +30,45 @@ export function initialise<
     })
   }
 
-  const initialisedKeys = new Set<string>()
+  const initialisedKeys = new Map<string, SyncControl["kind"]>()
+  const controls = new WeakMap<Element, SyncControl>()
   const composing = new WeakSet<Element>()
 
-  // Register sync first so consumer input handlers see the current state.
+  // Register sync first so consumer input/change handlers see the current state.
   for (const binding of elements) {
     const { sync } = binding
     if (sync === undefined) continue
     for (const target of binding.targets) {
-      const input = syncControl(target)
-      if (!initialisedKeys.has(sync)) {
-        state = { ...state, [sync]: input.value }
-        initialisedKeys.add(sync)
+      const control = syncControl(target)
+      controls.set(target, control)
+      const kind = initialisedKeys.get(sync)
+      if (kind !== undefined && kind !== control.kind) {
+        throw new TypeError(`sync key "${sync}" cannot mix checkbox and string controls`)
+      }
+      if (kind === undefined) {
+        state = { ...state, [sync]: control.read() }
+        initialisedKeys.set(sync, control.kind)
       }
       const update = () => {
-        if (store.controller.getState()[sync] !== input.value) {
-          store.patch({ [sync]: input.value } as Partial<State>)
+        const value = control.read()
+        if (controller.getState()[sync] !== value) {
+          store.patch({ [sync]: value } as Partial<State>)
         }
       }
-      listen(target, "compositionstart", () => { composing.add(target) })
-      listen(target, "input", (event) => {
-        if ((event as InputEvent).isComposing) composing.add(target)
-        update()
-      })
-      listen(target, "compositionend", () => {
-        composing.delete(target)
-        update()
-      })
+      if (control.kind === "boolean") {
+        listen(target, "input", update)
+        listen(target, "change", update)
+      } else {
+        listen(target, "compositionstart", () => { composing.add(target) })
+        listen(target, "input", (event) => {
+          if ((event as InputEvent).isComposing) composing.add(target)
+          update()
+        })
+        listen(target, "compositionend", () => {
+          composing.delete(target)
+          update()
+        })
+      }
     }
   }
 
@@ -105,25 +117,44 @@ export function initialise<
           writeClasses(target, value)
         }
         if (sync !== undefined && !composing.has(target)) {
-          const input = target as ValueControl
-          const value = state[sync] as string
-          if (input.value !== value) input.value = value
+          controls.get(target)!.write(state[sync] as string | boolean)
         }
       }
     }
   })
 }
 
-type ValueControl = HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+interface SyncControl {
+  kind: "string" | "boolean"
+  read(): string | boolean
+  write(value: string | boolean): void
+}
 
-function syncControl(target: Element): ValueControl {
+function syncControl(target: Element): SyncControl {
   const name = target.localName
-  const control = target as ValueControl
-  const supported = target.namespaceURI === "http://www.w3.org/1999/xhtml" && (
-    name === "textarea" ||
-    (name === "select" && !(control as HTMLSelectElement).multiple) ||
-    (name === "input" && !["checkbox", "radio", "file"].includes((control as HTMLInputElement).type))
-  )
-  if (!supported) throw new TypeError("sync requires a string-valued input, textarea, or single-select control")
-  return control
+  const input = target as HTMLInputElement
+  if (target.namespaceURI === "http://www.w3.org/1999/xhtml") {
+    if (name === "input" && input.type === "checkbox") {
+      return {
+        kind: "boolean",
+        read: () => input.checked,
+        write: (value) => {
+          if (input.checked !== value) input.checked = value as boolean
+        },
+      }
+    }
+    if (name === "textarea" ||
+      (name === "select" && !(target as HTMLSelectElement).multiple) ||
+      (name === "input" && !["radio", "file"].includes(input.type))) {
+      const control = target as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+      return {
+        kind: "string",
+        read: () => control.value,
+        write: (value) => {
+          if (control.value !== value) control.value = value as string
+        },
+      }
+    }
+  }
+  throw new TypeError("sync requires a checkbox, string-valued input, textarea, or single-select control")
 }

@@ -142,32 +142,57 @@ synchronous contracts.
 
 ## Two-way values with sync
 
-`sync: "stateKey"` binds a string-valued state field to a control's live value.
-Supported controls are string-valued inputs, textareas, and single-select controls.
-Checkboxes, radio buttons, file inputs, and multi-selects cause a mount error.
+`sync` automatically keeps a control and a state field in sync. Updating state
+from user input requires no action or event handler:
+
+```ts
+const controller = Mosaic(root, {
+  state: { query: "", enabled: false },
+  elements: [
+    { select: "input.search", sync: "query" },
+    { select: 'input[type="checkbox"]', sync: "enabled" },
+  ],
+});
+```
+
+Typing updates `query`; checking or unchecking the checkbox updates `enabled`.
+String-valued inputs, textareas, and single-select controls use `.value` and require
+string state fields. Checkboxes use `.checked` and require boolean state fields.
+Checkbox `.value` and `.indeterminate` are left untouched. Radio buttons, file
+inputs, and multi-selects cause a mount error.
+
+At mount, the DOM wins over configured state. When controls share a key, the first
+bound control supplies its initial value and the rest mirror it. Binding order
+follows the `elements` array, then document order within each binding. Keys with
+no matching controls retain their configured state. Multiple checkboxes sharing a
+key mirror one boolean; they do not collect an array of selected values. Mixing
+checkbox and string-value controls on the same key causes a mount error.
+
+String controls update state on `input`; checkboxes update on both `input` and
+`change`. Sync runs before consumer handlers for those events. Actions can also
+update control values or checked states on the next render. Equal values are left
+untouched to avoid redundant assignments and preserve cursor position.
+
+Add `on.input` only when you want additional behaviour, such as filtering
+suggestions. The handler sees state that `sync` has already updated:
 
 ```ts
 {
   select: "input.search",
   sync: "query",
-  on: { input: ({ state, dispatch }) => dispatch("search", state.query) },
+  on: { input: ({ dispatch }) => dispatch("filterSuggestions") },
 }
 ```
 
-At mount, the DOM wins over configured state. When controls share a key, the first
-bound control supplies its initial value and the rest mirror it. Binding order
-follows the `elements` array, then document order within each binding. Keys with
-no matching controls retain their configured state.
-
-Input events update state before consumer `on.input` handlers run. Actions update
-control values on the next render, including clearing them with `""`. Equal values
-are left untouched to preserve cursor position.
+Here `filterSuggestions` reads the current query from its reducer's state; it does
+not need to copy the input value into state. Checkbox `on.change` handlers likewise
+see the current boolean.
 
 During IME composition, input events continue updating state, but Mosaic leaves
-the composing control's value untouched. Other controls sharing the key can still
-update. On composition end, the final DOM value is committed and mirrored.
-Values remain strings; numeric coercion and form-reset handling belong in consumer
-code.
+the composing string control's value untouched. Other controls sharing the key can
+still update. On composition end, the final DOM value is committed and mirrored.
+Numeric coercion, array-valued checkbox groups, radio groups, and automatic
+form-reset handling belong in consumer code.
 
 ## State, completion, and cleanup
 

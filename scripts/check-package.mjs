@@ -52,20 +52,27 @@ try {
     check(Mosaic === $);
     for (const mount of [Mosaic, Min]) {
       const root = document.createElement('div');
-      root.innerHTML = '<input value="DOM"><output class="layout"></output>';
+      root.innerHTML = '<input type="text" value="DOM"><input type="checkbox" checked><output class="layout"></output>';
       document.body.append(root);
       const output = root.querySelector('output');
       const controller = mount(root, {
-        state: { value: 'configured' },
-        actions: { change: (state, value) => ({ ...state, value }) },
+        state: { value: 'configured', enabled: false },
+        actions: { change: (state, value) => ({ ...state, value }), enable: (state, enabled) => ({ ...state, enabled }) },
         elements: [
-          { select: 'input', sync: 'value' },
+          { select: 'input[type=text]', sync: 'value' },
+          { select: 'input[type=checkbox]', sync: 'enabled' },
           { select: 'output', text: ({state}) => state.value,
             attribute: ({state}) => ({'data-value':state.value}),
             class: ({state}) => ({active:state.value.length > 0}) },
         ],
       });
       check(output.textContent === 'DOM');
+      const checkbox = root.querySelector('input[type=checkbox]');
+      check(controller.getState().enabled === true);
+      checkbox.click();
+      check(controller.getState().enabled === false);
+      await controller.dispatch('enable', true);
+      check(checkbox.checked === true);
       await controller.dispatch('change', 'updated');
       check(output.textContent === 'updated');
       check(output.getAttribute('data-value') === 'updated');
