@@ -1,241 +1,227 @@
 # Mosaic
 
-## Accelerate your UI development
+Mosaic adds state-driven behaviour to existing HTML. Describe actions and DOM
+bindings in a configuration, then mount it on an element. The application owns
+the markup and the enhancement's lifetime.
 
-🚧 Please kindly note that this project is a work in progress. 🚧
+## Install and use
 
-## Mosaic allows authors to write once and run anywhere
-
-Mosaic enables UI behaviour to be described using a combination of functional programming and declarative configuration, separating behaviour from presentation to ensure maximum reusability.
-
-## Mosaic enables teams to focus on UI presentation
-
-Get a head start on UI development by leveraging UI behaviour that is
-highly performant, accessible, and fully tested straight out of the box, letting you focus on your project presentation.
-
-[![npm](https://shields.io/npm/v/mosaic)](https://www.npmjs.com/package/mosaic)
-[![gzip size](https://img.badgesize.io/https://unpkg.com/mosaic/dist/mosaic.min.js?compression=gzip&label=gzip)](https://unpkg.com/mosaic/dist/mosaic.min.js)
-
-## Example
-
-The following configuration implements the Accordion pattern:
-
-```js
-let counter = 0;
-
-export const Accordion = () => {
-  const id = counter++;
-  return {
-    state: {
-      openPanel: 0,
-    },
-    actions: {
-      togglePanel: (state, { index: i }) => ({
-        ...state,
-        openPanel: state.openPanel === i ? -1 : i,
-      }),
-    },
-    elements: [
-      {
-        select: "button[accordion-toggle]",
-        attribute: ({ state, index: i }) => ({
-          id: `trigger_${id}_${i}`,
-          "aria-controls": `panel_${id}_${i}`,
-          "aria-expanded": String(state.openPanel === i),
-        }),
-        on: {
-          click: "togglePanel",
-        },
-      },
-      {
-        select: "[accordion-panel]",
-        attribute: ({ state, index: i }) => ({
-          id: `panel_${id}_${i}`,
-          "aria-labelledby": `trigger_${id}_${i}`,
-          hidden: state.openPanel !== i,
-          role: "region",
-        }),
-      },
-    ],
-  };
-};
+```sh
+npm install mosaic
 ```
 
-Bind the configuration to an existing DOM node:
+The package provides ESM JavaScript and TypeScript declarations. The example below
+uses TypeScript; omit parameter type annotations in JavaScript.
 
-```js
+```html
+<div id="counter">
+  <button type="button" data-increment>Add one</button>
+  <button type="button" data-reset>Reset</button>
+  <output aria-live="polite"></output>
+</div>
+```
+
+```ts
 import { Mosaic } from "mosaic";
 
-const rootNode = document.querySelector("[data-accordion]");
-const controller = Mosaic(rootNode, Accordion());
-```
-
-Mosaic enhances the supplied node and returns a controller with `dispatch`,
-`getState`, `subscribe`, and `destroy`. Dispatch actions to update state.
-
-```js
-const unsubscribe = controller.subscribe((state) => {
-  console.log(state.openPanel);
+const root = document.querySelector("#counter")!;
+const controller = Mosaic(root, {
+  state: { count: 0 },
+  actions: {
+    increment: (state, amount: number) => ({ ...state, count: state.count + amount }),
+    reset: (state) => ({ ...state, count: 0 }),
+  },
+  elements: [
+    { select: "[data-increment]", on: { click: ({ dispatch }) => dispatch("increment", 1) } },
+    { select: "[data-reset]", on: { click: "reset" } },
+    { select: "output", text: ({ state }) => state.count },
+  ],
 });
 
-await controller.dispatch("togglePanel", { index: 1 });
-// The DOM now reflects the completed batch.
-unsubscribe();
+await controller.dispatch("increment", 2);
+console.log(controller.getState().count); // 2, with the DOM updated
+
+// When the application removes this enhancement:
+controller.destroy();
 ```
 
-Reducers update state synchronously, so `getState()` immediately returns the latest
-state. Rendering and subscriber notifications are batched into the next animation
-frame. Several actions before that frame share one render of their final state.
-`dispatch` resolves after rendering and synchronous subscriber notifications finish;
-it does not wait for browser paint. An action dispatched during publication updates
-state immediately and renders in a later frame, with its own completion promise.
+`$` is an alias of `Mosaic`. A minified ESM entry is available at
+`mosaic/dist/mosaic.min.js`, including for use through an ESM-compatible CDN.
 
-`getState()` returns a shallow snapshot. Update nested objects and arrays immutably.
-Subscriptions begin with the next publication, after rendering, and return an
-idempotent unsubscribe function. Asynchronous subscriber work is not awaited.
+## Configuration and selectors
 
-Unknown actions and reducer errors reject the dispatch promise. A render or
-subscriber error rejects every dispatch promise in that batch; remaining
-subscribers still run and later updates can recover. Multiple publication errors
-are combined in an `AggregateError`. Committed state is retained after publication
-errors, and failed rendering may leave the DOM partially updated. Errors from
-`sync`-only batches, which have no dispatch promise, are reported through the
-browser's `reportError` function.
+`Mosaic(root, { state, actions, elements })` returns a controller. State and actions
+are optional. Reducers receive `(state, payload)`, run synchronously, and return the
+complete next state. State and action payload types are inferred from the config;
+annotate payload parameters in TypeScript.
 
-## Selectors, events, and cleanup
+Each binding's `select` is an ordinary CSS selector. It binds **all matching
+descendants** of the root, excluding the root itself. Use `:scope > button` for
+direct children. Empty match sets are valid. Invalid CSS selectors throw at mount.
 
-Each binding's `select` is a CSS selector that matches every matching descendant
-of the mounting root. Matches are captured once at mount; callback indexes follow
-their original document order. An empty match set is valid. Later additions and
-changes to selector membership do not change the captured bindings.
+Matches are captured once, in document order. Later insertions, reordering, and
+selector changes do not alter that collection or its indexes. Create the required
+nodes before mounting. Destroy and remount an enhancement when its binding
+collection needs to change.
 
-The mounting root itself is excluded. Use `:scope` in selectors to express
-relationships to the root, such as `:scope > button` for direct children.
-Handle root-level, document, or window events in consumer code—for example, an
-outside-click listener can check `rootNode.contains(event.target)` before dispatching
-an action. Remove consumer-owned listeners when disposing of the enhancement.
+An optional configuration callback, `getState(state)`, transforms the complete
+state at initialization and after each write. It must be synchronous and return
+the complete state. Read current state through the controller's `getState()`.
 
-Rendering callbacks receive `{ state, element, index }`. Event callbacks receive
-`{ state, element, index, event, dispatch, getState }`. `element` is the bound target;
-`event.target` may be a descendant. `state` is a snapshot taken when the listener
-runs; `getState()` reads the latest state after any actions dispatched by the handler.
-An action name such as `on: { click: "togglePanel" }` forwards the whole event
-context as the reducer's payload.
+## Rendering
 
-Listeners attach directly to matching elements and follow ordinary DOM event
-propagation. With overlapping or nested bindings, a bubbling event can invoke
-several listeners. Choose selectors and use event propagation controls to suit
-your interface; nested components do not receive automatic event isolation.
+Rendering callbacks receive `{ state, element, index }`. `element` is the bound
+element and `index` is its position in the captured collection for that binding.
 
-Call `controller.destroy()` when the enhancement is no longer needed. Destruction
-is idempotent: it removes Mosaic's listeners and subscriptions, cancels pending
-rendering, and rejects pending or subsequent dispatches with `AbortError`.
-`getState()` remains readable, and subscribing after destruction returns a no-op
-unsubscribe function. Cleanup leaves the current DOM content in place. The same
-nodes can then be bound to a new controller.
+| Field | Callback result | Effect |
+| --- | --- | --- |
+| `attribute` | Map of exact DOM attribute names to values | Sets or removes the returned attributes |
+| `text` | String, number, boolean, `null`, or `undefined` | Writes plain text content |
+| `class` | Map of class names to booleans | Toggles only returned class names |
 
-Promises returned by event handlers are observed: errors are reported through the
-browser's `reportError`, while dispatch cancellations caused by destruction are
-ignored. Consumer-created timers, listeners, and asynchronous work remain the
-consumer's responsibility to clean up.
-
-## DOM bindings
-
-`attribute` returns attribute names exactly as they appear in the DOM, such as
-`"aria-expanded"`, `"data-state"`, and `tabindex`. Strings and numbers set attribute
-values; `true` sets an empty presence attribute. `false`, `null`, and `undefined`
-remove an attribute. Use strings for string-valued booleans, including ARIA states:
-
-```js
+```ts
 {
   select: "button",
   attribute: ({ state }) => ({
     "aria-expanded": String(state.open),
+    "data-status": state.status,
     disabled: state.busy,
+    tabindex: 0,
   }),
   text: ({ state }) => state.label,
   class: ({ state }) => ({ active: state.open }),
 }
 ```
 
-`text` writes plain text content. Strings, numbers, and booleans become text;
-`null` and `undefined` become empty text. This replaces the element's existing
-content, including child elements.
+Attribute names pass directly to the DOM: use `"aria-expanded"`, `tabindex`, or
+`viewBox` as appropriate. Strings and numbers set values; `true` adds an empty
+presence attribute; `false`, `null`, and `undefined` remove it. String-valued
+booleans stay explicit strings, so use `"false"` for an ARIA false state.
+Omitted attributes remain untouched.
 
-`class` returns a map of class names to booleans. Each returned name is added or
-removed according to its value. Unrelated classes and names omitted from later
-results remain untouched. Attribute names omitted from a result also remain
-untouched.
+`text` treats nullish results as empty text and replaces existing content,
+including child elements. It writes text rather than parsing HTML.
+
+`class` preserves unrelated classes. Names omitted from later callback results
+also remain untouched; return `false` explicitly to remove a class. Nullish class
+or attribute maps leave the element unchanged.
+
+## Events
+
+`on` maps DOM event names to callbacks or action names. Event callbacks receive
+`{ state, element, index, event, dispatch, getState }`. `element` is the bound
+element; `event.target` can be a descendant. `state` is a snapshot taken when the
+listener runs, while `getState()` reads the latest committed state.
+
+An action-name shorthand forwards the event context as its payload:
+
+```ts
+const config = {
+  state: { selected: -1 },
+  actions: {
+    choose: (state: { selected: number }, { index }: { index: number }) => ({ ...state, selected: index }),
+  },
+  elements: [{ select: "button", on: { click: "choose" } }],
+};
+```
+
+Listeners attach directly to the matched elements, including for non-bubbling
+events such as `focus`. Normal DOM propagation applies: overlapping bindings and
+nested enhancements can both handle a bubbling event. Selectors can also match
+controls inside nested components. Choose selectors and propagation controls to
+suit the application; Mosaic does not isolate nested bindings.
+
+Handle root-level, document, and window events in consumer code. For example,
+a document listener can check `root.contains(event.target)` before dispatching an
+outside-dismissal action. Remove that listener in the application's cleanup.
+
+Async event callbacks can await dispatches or perform application work. Rejected
+handler promises are reported through the browser's `reportError`; dispatch
+cancellations caused by destruction are ignored. Reducers and subscribers remain
+synchronous contracts.
 
 ## Two-way values with sync
 
-Use `sync` to bind a string state field to a control's live value:
+`sync: "stateKey"` binds a string-valued state field to a control's live value.
+Supported controls are string-valued inputs, textareas, and single-select controls.
+Checkboxes, radio buttons, file inputs, and multi-selects cause a mount error.
 
-```js
+```ts
 {
   select: "input.search",
   sync: "query",
-  on: {
-    input: ({ state, dispatch }) => {
-      // state.query already contains the current input value.
-      dispatch("search", state.query);
-    },
-  },
+  on: { input: ({ state, dispatch }) => dispatch("search", state.query) },
 }
 ```
 
-At mount, the DOM supplies the initial value. When several controls share a state
-key, the first bound control supplies the value and the others mirror it. Binding
-order follows the `elements` array, then document order within each selector's
-matches. Keys with no matching controls retain their configured state.
+At mount, the DOM wins over configured state. When controls share a key, the first
+bound control supplies its initial value and the rest mirror it. Binding order
+follows the `elements` array, then document order within each binding. Keys with
+no matching controls retain their configured state.
 
-Input events update state before consumer `on.input` handlers run. State changes
-from actions update control values in the next render, including clearing them
-with an empty string. Equal values are left untouched to preserve cursor position.
+Input events update state before consumer `on.input` handlers run. Actions update
+control values on the next render, including clearing them with `""`. Equal values
+are left untouched to preserve cursor position.
 
-During IME composition, input events continue updating state, but rendering leaves
+During IME composition, input events continue updating state, but Mosaic leaves
 the composing control's value untouched. Other controls sharing the key can still
-update. When composition ends, the final DOM value is committed to state and
-mirrored to the other controls.
+update. On composition end, the final DOM value is committed and mirrored.
+Values remain strings; numeric coercion and form-reset handling belong in consumer
+code.
 
-Supported controls are string-valued inputs, textareas, and single-select controls.
-Checkboxes, radio buttons, file inputs, and multi-selects cannot use `sync` and
-cause a mount error. Values remain strings; numeric conversion and form-reset
-handling belong in consumer code.
+## State, completion, and cleanup
 
-## Install
+| Controller method | Contract |
+| --- | --- |
+| `dispatch(name, payload)` | Commits state synchronously; returns a promise for the batch's DOM update and subscriber notifications |
+| `getState()` | Returns a shallow snapshot of current state |
+| `subscribe(callback)` | Registers a synchronous callback and returns an idempotent unsubscribe function |
+| `destroy()` | Removes owned listeners/subscriptions and cancels pending rendering |
 
-### cdn
+Several actions before the next animation frame share one render of their final
+state. Rendering precedes subscriber notifications. Awaiting dispatch observes the
+updated DOM; it does not wait for browser paint. Actions dispatched during
+publication commit immediately and render in a later frame with their own promises.
 
-```js
-import { Mosaic } from "https://unpkg.com/mosaic";
-```
+Subscriptions start with the next publication. New subscriptions created during
+publication start on the following batch; removals take effect immediately.
+Async subscriber work is not awaited. State snapshots are shallow: update nested
+objects and arrays immutably so changes pass through actions and publication.
 
-### npm
+Unknown actions and reducer errors reject dispatch. Render or subscriber errors
+reject every dispatch in the affected batch; remaining subscribers still run.
+Multiple publication errors become an `AggregateError`. State stays committed,
+and failed rendering can leave partially updated DOM. Later updates can recover.
+Sync-only batches have no dispatch promise, so errors are reported using the
+browser's `reportError`.
 
-```sh
-> npm i mosaic
-```
+Destroy is idempotent and leaves the current DOM content in place. Pending and
+subsequent dispatches reject with `AbortError`; `getState()` remains readable.
+Subscribing after destruction returns a no-op unsubscribe function. The same nodes
+can be mounted again. The application must clean up its own timers, listeners,
+and asynchronous work and destroy enhancements before removing a route or region.
 
-## Development and tests
+## Examples and development
 
-Use Node.js 22 (22.12 or later), 24, or 26+ for the test tooling.
+The repository includes an [accordion](examples/accordion/README.md),
+[tabs](examples/tabs/README.md), and a [combobox](examples/combobox/README.md).
+These are application examples with their own markup contracts.
+
+Use Node.js 22.12+, 24, or 26+ for development tooling:
 
 ```sh
 npm ci
 npm run test:install-browsers
 npm test
+npm run test:all
+npm run typecheck
+npm run test:package
 ```
 
-Tests run in headless Chromium through Vitest Browser Mode and Playwright.
-
-- `npm run test:watch` reruns tests as files change. Add `-- --browser.headless=false` to see the browser.
-- `npm run test:coverage` prints source coverage and writes the HTML report to `coverage/index.html`.
-- `npm run typecheck` checks the library, examples, tests, and compile-only API contracts with strict TypeScript settings.
-- `npm run dev` serves the examples through Vite at [localhost:1983/examples/](http://localhost:1983/examples/).
-- `npm run build` type-checks, emits JavaScript and declarations, and builds the bundles. Package declarations are generated in `dist/types`.
-
-TypeScript infers state and action names; annotate reducer
-payloads such as `(state, amount: number) => ...`. Action-name event shorthand
-passes the event context; use a callback to supply a different payload.
-
+- `npm run dev` serves [the examples](http://localhost:1983/examples/) through Vite.
+- `npm test` runs Vitest Browser Mode in headless Chromium; `test:all` also runs Firefox and WebKit.
+- `npm run test:watch` watches Chromium tests. Add `-- --browser.headless=false` to see the browser.
+- `npm run test:coverage` writes Chromium source coverage to `coverage/index.html`.
+- `npm run build` checks types and generates ESM bundles and declarations in `dist`.
+- `npm run test:package` builds and packs locally, installs into a temporary consumer, checks ESM and type resolution, and runs browser consumption checks. It does not publish.
+- `npm pack` builds the package through `prepack`. Publishing is a separate manual action.

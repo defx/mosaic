@@ -16,12 +16,4 @@ export default [
       format: "es",
     },
   },
-  {
-    input: "dist/modules/index.js",
-    output: {
-      dir: "cjs",
-      format: "cjs",
-      preserveModules: true,
-    },
-  },
 ]

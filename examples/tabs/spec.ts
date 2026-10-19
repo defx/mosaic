@@ -1,110 +1,109 @@
-import { afterEach, assert, beforeEach, describe, it } from "vitest"
+import { afterEach, assert, beforeEach, it } from "vitest"
+import { userEvent } from "vitest/browser"
 import { Mosaic } from "../../src/index.js"
+import { nextFrame } from "../../test/helpers/browser.js"
 import { Tabs } from "./tabs.js"
+import markup from "./index.html?raw"
 
-describe("tabs", () => {
-  let rootNode: HTMLElement
-
-  beforeEach(() => {
-    rootNode = document.createElement("root-node")
-    document.body.appendChild(rootNode)
+let root: HTMLElement
+const controllers: { destroy(): void }[] = []
+beforeEach(() => {
+  const parsed = new DOMParser().parseFromString(markup, "text/html")
+  root = document.importNode(parsed.querySelector<HTMLElement>("[data-tabs]")!, true)
+  document.body.append(root)
+})
+afterEach(() => {
+  controllers.splice(0).forEach((controller) => controller.destroy())
+  root.remove()
+})
+function mount(node = root) {
+  const controller = Mosaic(node, Tabs({ $$: (query) => [...node.querySelectorAll<HTMLElement>(query)] }))
+  controllers.push(controller)
+  return controller
+}
+function tabs() { return [...root.querySelectorAll<HTMLButtonElement>('[role="tab"]')] }
+function panels() { return [...root.querySelectorAll<HTMLElement>('[role="tabpanel"]')] }
+function assertSelection(selected: number) {
+  tabs().forEach((tab, i) => {
+    assert.equal(tab.getAttribute("aria-selected"), String(i === selected))
+    assert.equal(tab.tabIndex, i === selected ? 0 : -1)
+    assert.equal(panels()[i].hidden, i !== selected)
+    assert.equal(tab.getAttribute("aria-controls"), panels()[i].id)
+    assert.equal(panels()[i].getAttribute("aria-labelledby"), tab.id)
   })
+}
 
-  afterEach(() => {
-    document.body.removeChild(rootNode)
-  })
+it("initialises all tabs and panels with reciprocal accessible relationships", () => {
+  mount()
+  assertSelection(0)
+})
 
-  function mount() {
-    rootNode.innerHTML = /* html */ `
-    <div data-tabs class="tabs">
-    <h3 id="tablist-1">
-        Danish Composers
-    </h3>
-    <div role="tablist" aria-labelledby="tablist-1" class="automatic">
-        <button id="tab-1" type="button" role="tab" aria-selected="true" aria-controls="tabpanel-1">
-            <span class="focus">
-                Maria Ahlefeldt
-            </span>
-        </button>
-        <button id="tab-2" type="button" role="tab" aria-selected="false" aria-controls="tabpanel-2" tabindex="-1">
-            <span class="focus">
-                Carl Andersen
-            </span>
-        </button>
-        <button id="tab-3" type="button" role="tab" aria-selected="false" aria-controls="tabpanel-3" tabindex="-1">
-            <span class="focus">
-                Ida da Fonseca
-            </span>
-        </button>
-        <button id="tab-4" type="button" role="tab" aria-selected="false" aria-controls="tabpanel-4" tabindex="-1">
-            <span class="focus">
-                Peter Müller
-            </span>
-        </button>
-    </div>
-    <div id="tabpanel-1" role="tabpanel" tabindex="0" aria-labelledby="tab-1">
-        <p>
-            Maria Theresia Ahlefeldt (16 January 1755 – 20 December 1810) was a Danish, (originally German),
-            composer.
-            She is known as the first female composer in Denmark.
-            Maria Theresia composed music for several ballets, operas, and plays of the royal theatre.
-            She was given good critic as a composer and described as a “
-            <span lang="da">
-                virkelig Tonekunstnerinde
-            </span>
-            ” ('a True Artist of Music').
-        </p>
-    </div>
-    <div id="tabpanel-2" role="tabpanel" tabindex="0" aria-labelledby="tab-2" class="is-hidden">
-        <p>
-            Carl Joachim Andersen (29 April 1847 – 7 May 1909) was a Danish flutist, conductor and composer born in
-            Copenhagen, son of the flutist Christian Joachim Andersen.
-            Both as a virtuoso and as composer of flute music, he is considered one of the best of his time.
-            He was considered to be a tough leader and teacher and demanded as such a lot from his orchestras but
-            through that style he reached a high level.
-        </p>
-    </div>
-    <div id="tabpanel-3" role="tabpanel" tabindex="0" aria-labelledby="tab-3" class="is-hidden">
-        <p>
-            Ida Henriette da Fonseca (July 27, 1802 – July 6, 1858) was a Danish opera singer and composer.
-            Ida Henriette da Fonseca was the daughter of Abraham da Fonseca (1776–1849) and Marie Sofie Kiærskou
-            (1784–1863).
-            She and her sister Emilie da Fonseca were students of Giuseppe Siboni, choir master of the Opera in
-            Copenhagen.
-            She was given a place at the royal Opera alongside her sister the same year she debuted in 1827.
-        </p>
-    </div>
-    <div id="tabpanel-4" role="tabpanel" tabindex="0" aria-labelledby="tab-4" class="is-hidden">
-        <p>
-            Peter Erasmus Lange-Müller (1 December 1850 – 26 February 1926) was a Danish composer and pianist.
-            His compositional style was influenced by Danish folk music and by the work of Robert Schumann; Johannes
-            Brahms; and his Danish countrymen, including J.P.E. Hartmann.
-        </p>
-    </div>
-    </div>`
-    const node = rootNode.querySelector("[data-tabs]")!
-    return Mosaic(node, Tabs({ $$: (query) => [...node.querySelectorAll<HTMLElement>(query)] }))
+it("selects every tab when clicking nested content and moves focus", async () => {
+  mount()
+  for (let i = 0; i < tabs().length; i++) {
+    await userEvent.click(tabs()[i].querySelector("span")!)
+    await nextFrame()
+    assertSelection(i)
+    assert.strictEqual(document.activeElement, tabs()[i])
   }
+})
 
-  const select = {
-    get tabs() {
-      return rootNode.querySelector("[data-tabs]")!
-    },
+it("moves keyboard selection and focus with wrapping, Home, and End", async () => {
+  mount()
+  tabs()[0].focus()
+  for (const [key, selected] of [
+    ["ArrowLeft", 3], ["ArrowRight", 0], ["ArrowRight", 1],
+    ["End", 3], ["Home", 0],
+  ] as const) {
+    await userEvent.keyboard(`{${key}}`)
+    await nextFrame()
+    assertSelection(selected)
+    assert.strictEqual(document.activeElement, tabs()[selected])
   }
+  await userEvent.tab()
+  assert.strictEqual(document.activeElement, panels()[0])
+})
 
-  // TODO (chunk 7): replace this smoke test with real tabs interaction tests.
-  it("placeholder: mounts tabs; interaction coverage follows in chunk 7", () => {
-    mount()
-    assert.equal(1, 1)
-  })
+it("prevents defaults only for supported unmodified navigation keys", async () => {
+  mount()
+  tabs()[0].focus()
+  const arrow = new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true, cancelable: true })
+  tabs()[0].dispatchEvent(arrow)
+  assert.isTrue(arrow.defaultPrevented)
+  await nextFrame()
+  for (const event of [
+    new KeyboardEvent("keydown", { key: "a", bubbles: true, cancelable: true }),
+    new KeyboardEvent("keydown", { key: "ArrowRight", ctrlKey: true, bubbles: true, cancelable: true }),
+    new KeyboardEvent("keydown", { key: "Home", isComposing: true, bubbles: true, cancelable: true }),
+  ]) {
+    tabs()[1].dispatchEvent(event)
+    assert.isFalse(event.defaultPrevented)
+  }
+  await nextFrame()
+  assertSelection(1)
+})
 
-  it("wraps tab navigation using the configured tab count", async () => {
-    const store = mount()
-    await store.dispatch("selectPreviousTab")
-    assert.equal(store.getState().selectedTab, 3)
-    await store.dispatch("selectNextTab")
-    assert.equal(store.getState().selectedTab, 0)
-    await store.dispatch("selectLastTab")
-    assert.equal(store.getState().selectedTab, 3)
-  })
+it("wraps programmatic navigation using the configured tab count", async () => {
+  const controller = mount()
+  await controller.dispatch("selectPreviousTab")
+  assertSelection(3)
+  await controller.dispatch("selectNextTab")
+  assertSelection(0)
+  await controller.dispatch("selectLastTab")
+  assertSelection(3)
+  await controller.dispatch("selectFirstTab")
+  assertSelection(0)
+})
+
+it("generates stable tab and panel IDs when markup supplies none", async () => {
+  tabs().forEach((tab) => tab.removeAttribute("id"))
+  panels().forEach((panel) => panel.removeAttribute("id"))
+  const controller = mount()
+  const ids = [...tabs(), ...panels()].map((node) => node.id)
+  assert.equal(new Set(ids).size, ids.length)
+  assert.isTrue(ids.every(Boolean))
+  assertSelection(0)
+  await controller.dispatch("selectLastTab")
+  assertSelection(3)
+  assert.deepEqual([...tabs(), ...panels()].map((node) => node.id), ids)
 })

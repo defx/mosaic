@@ -1,9 +1,10 @@
 import { afterEach, assert, beforeEach, describe, it, vi } from "vitest"
+import { userEvent } from "vitest/browser"
 import { nextFrame } from "../../test/helpers/browser.js"
 import { mountComboBox } from "./combobox.js"
 
 const states =
-  `Alabama,Alaska,American Samoa,Arizona,Arkansas,California,ColoradoConnecticut,Delaware,District of Columbia,Florida,Georgia,Guam,Hawaii,Idaho,Illinois,Indiana,Iowa,Kansas,Kentucky,Louisiana,Maine,Maryland,Massachusetts,Michigan,Minnesota,Mississippi,Missouri,Montana,Nebraska,Nevada,New Hampshire,New Jersey,New Mexico,New York,North Carolina,North Dakota,Northern Marianas Islands,Ohio,Oklahoma,Oregon,Pennsylvania,Puerto Rico,Rhode Island,South Carolina,South Dakota,Tennessee,Texas,Utah,Vermont,Virginia,Virgin Islands,Washington,West Virginia,Wisconsin,Wyoming`
+  `Alabama,Alaska,American Samoa,Arizona,Arkansas,California,Colorado,Connecticut,Delaware,District of Columbia,Florida,Georgia,Guam,Hawaii,Idaho,Illinois,Indiana,Iowa,Kansas,Kentucky,Louisiana,Maine,Maryland,Massachusetts,Michigan,Minnesota,Mississippi,Missouri,Montana,Nebraska,Nevada,New Hampshire,New Jersey,New Mexico,New York,North Carolina,North Dakota,Northern Marianas Islands,Ohio,Oklahoma,Oregon,Pennsylvania,Puerto Rico,Rhode Island,South Carolina,South Dakota,Tennessee,Texas,Utah,Vermont,Virginia,Virgin Islands,Washington,West Virginia,Wisconsin,Wyoming`
     .split(",")
 
 describe("combo-box", () => {
@@ -77,7 +78,7 @@ describe("combo-box", () => {
     await nextFrame()
   }
 
-  async function press(key: string, type = "keyup") {
+  async function press(key: string, type = "keydown") {
     select.input.dispatchEvent(new KeyboardEvent(type, { key, bubbles: true }))
     await nextFrame()
   }
@@ -113,6 +114,67 @@ describe("combo-box", () => {
     await nextFrame()
     assert.equal(contains.mock.calls.length, 1)
     assert.isTrue(select.listbox.hidden)
+  })
+
+  it("supports real keyboard selection, Tab departure, and prevents Enter submission while open", async () => {
+    mount(["Alabama", "New York", "New Jersey"])
+    const form = document.createElement("form")
+    const combo = select.combobox
+    combo.replaceWith(form)
+    form.append(combo)
+    const next = document.createElement("input")
+    next.setAttribute("aria-label", "Next field")
+    form.append(next)
+    const submitted = vi.fn((event: Event) => event.preventDefault())
+    form.addEventListener("submit", submitted)
+    await userEvent.fill(select.input, "new")
+    await userEvent.keyboard("{ArrowDown}{Enter}")
+    await nextFrame()
+    assert.equal(select.input.value, "New York")
+    assert.isTrue(select.listbox.hidden)
+    assert.equal(submitted.mock.calls.length, 0)
+    await userEvent.fill(select.input, "new")
+    await userEvent.keyboard("{ArrowUp}")
+    await userEvent.tab()
+    await nextFrame()
+    assert.equal(select.input.value, "New Jersey")
+    assert.isTrue(select.listbox.hidden)
+    assert.strictEqual(document.activeElement, next)
+  })
+
+  it("selects nested option content using real pointer input without changing option identity", async () => {
+    const original = mount(["Alabama", "New York", "New Jersey"])
+    const nested = document.createElement("span")
+    nested.textContent = original[2].textContent
+    original[2].replaceChildren(nested)
+    await userEvent.fill(select.input, "new")
+    await userEvent.click(nested)
+    await nextFrame()
+    assert.equal(select.input.value, "New Jersey")
+    assert.isTrue(select.listbox.hidden)
+    assert.strictEqual(document.activeElement, select.input)
+    select.allOptions.forEach((option, i) => assert.strictEqual(option, original[i]))
+  })
+
+  it("leaves IME and modified navigation keys to the browser", async () => {
+    mount(["Alabama", "New York"])
+    await search("a")
+    for (const options of [{ isComposing: true }, { ctrlKey: true }]) {
+      const event = new KeyboardEvent("keydown", { key: "Enter", cancelable: true, bubbles: true, ...options })
+      select.input.dispatchEvent(event)
+      assert.isFalse(event.defaultPrevented)
+    }
+    await nextFrame()
+    assert.isFalse(select.listbox.hidden)
+    assert.equal(select.input.value, "a")
+  })
+
+  it("keeps Colorado and Connecticut as separate suggestions", async () => {
+    mount()
+    for (const name of ["Colorado", "Connecticut"]) {
+      await search(name)
+      assert.deepEqual(select.options.map((option) => option.textContent), [name])
+    }
   })
 
   it(`sets [role="combobox"] on the input`, () => {
@@ -187,7 +249,7 @@ describe("combo-box", () => {
     input.focus()
 
     input.dispatchEvent(
-      new KeyboardEvent("keyup", {
+      new KeyboardEvent("keydown", {
         key: "Down",
         bubbles: true,
       })
@@ -212,7 +274,7 @@ describe("combo-box", () => {
     assert.equal(select.listbox.hidden, false)
 
     input.dispatchEvent(
-      new KeyboardEvent("keyup", {
+      new KeyboardEvent("keydown", {
         key: "Esc",
         bubbles: true,
       })
@@ -240,13 +302,13 @@ describe("combo-box", () => {
     assert.equal(select.listbox.hidden, false)
 
     input.dispatchEvent(
-      new KeyboardEvent("keyup", {
+      new KeyboardEvent("keydown", {
         key: "Esc",
         bubbles: true,
       })
     )
     input.dispatchEvent(
-      new KeyboardEvent("keyup", {
+      new KeyboardEvent("keydown", {
         key: "Esc",
         bubbles: true,
       })
@@ -277,7 +339,7 @@ describe("combo-box", () => {
 
     for (const option of options) {
       input.dispatchEvent(
-        new KeyboardEvent("keyup", {
+        new KeyboardEvent("keydown", {
           key: "Down",
           bubbles: true,
         })
@@ -298,7 +360,7 @@ describe("combo-box", () => {
     // now test that selection wraps around to the first option
 
     input.dispatchEvent(
-      new KeyboardEvent("keyup", {
+      new KeyboardEvent("keydown", {
         key: "Down",
         bubbles: true,
       })
@@ -335,7 +397,7 @@ describe("combo-box", () => {
 
     for (const option of options) {
       input.dispatchEvent(
-        new KeyboardEvent("keyup", {
+        new KeyboardEvent("keydown", {
           key: "Up",
           bubbles: true,
         })
@@ -356,7 +418,7 @@ describe("combo-box", () => {
     // now test that selection wraps around to the last option
 
     input.dispatchEvent(
-      new KeyboardEvent("keyup", {
+      new KeyboardEvent("keydown", {
         key: "Up",
         bubbles: true,
       })
@@ -404,7 +466,7 @@ describe("combo-box", () => {
     await nextFrame()
 
     input.dispatchEvent(
-      new KeyboardEvent("keyup", {
+      new KeyboardEvent("keydown", {
         key: "Down",
         bubbles: true,
       })
@@ -414,7 +476,7 @@ describe("combo-box", () => {
     const { textContent } = select.options[0]
 
     input.dispatchEvent(
-      new KeyboardEvent("keyup", {
+      new KeyboardEvent("keydown", {
         key: "Enter",
         bubbles: true,
       })
@@ -437,7 +499,7 @@ describe("combo-box", () => {
     await nextFrame()
 
     input.dispatchEvent(
-      new KeyboardEvent("keyup", {
+      new KeyboardEvent("keydown", {
         key: "Down",
         bubbles: true,
       })

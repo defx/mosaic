@@ -3,8 +3,8 @@
   "type": "module",
   "version": "1.1.0",
   "description": "A JavaScript library for progressive enhancing HTML",
-  "main": "dist/mosaic.min.js",
-  "browser": "dist/mosaic.min.js",
+  "main": "dist/mosaic.js",
+  "browser": "dist/mosaic.js",
   "unpkg": "dist/mosaic.min.js",
   "module": "dist/mosaic.js",
   "types": "dist/types/index.d.ts",
@@ -14,18 +14,20 @@
     "test": "vitest run",
     "test:watch": "vitest --watch",
     "test:coverage": "vitest run --coverage",
-    "test:install-browsers": "playwright install chromium",
+    "test:install-browsers": "playwright install chromium firefox webkit",
     "size": "gzip -c9 ./dist/mosaic.min.js | wc -c",
     "build": "rm -rf dist cjs && npm run typecheck && tsc -p tsconfig.build.json && rollup -c && npm run size",
-    "prepublish": "npm run build"
+    "test:all": "vitest run --config vitest.all.config.ts",
+    "test:package": "npm run build && node scripts/check-package.mjs",
+    "prepack": "npm run build"
   },
   "keywords": [],
   "author": "",
   "license": "MIT",
   "files": [
-    "src",
-    "dist",
-    "cjs"
+    "dist/mosaic.js",
+    "dist/mosaic.min.js",
+    "dist/types"
   ],
   "directories": {
     "test": "test"
@@ -40,5 +42,17 @@
     "typescript": "7.0.2",
     "vite": "8.3.4",
     "vitest": "5.0.5"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/types/index.d.ts",
+      "import": "./dist/mosaic.js",
+      "default": "./dist/mosaic.js"
+    },
+    "./dist/mosaic.min.js": {
+      "types": "./dist/types/index.d.ts",
+      "import": "./dist/mosaic.min.js",
+      "default": "./dist/mosaic.min.js"
+    }
   }
 }

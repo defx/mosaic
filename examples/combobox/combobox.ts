@@ -129,49 +129,36 @@ export const ComboBox = ({ rootNode, $$ }: ExampleContext) => {
           input: ({ dispatch }) => {
             dispatch("onSearchInput")
           },
-          keydown: ({ event, dispatch }) => {
-            const { key } = event
-
-            switch (key) {
-              case "Tab": {
-                dispatch("replaceSearchTextWithSelectedOption")
+          keydown: async ({ event, dispatch, getState }) => {
+            if (event.isComposing || event.altKey || event.ctrlKey || event.metaKey) return
+            switch (event.key) {
+              case "Tab":
+                await dispatch("replaceSearchTextWithSelectedOption")
                 break
-              }
-            }
-          },
-          keyup: async ({ event, dispatch, getState }) => {
-            const { key } = event
-
-            switch (key) {
-              case "Enter": {
-                dispatch("replaceSearchTextWithSelectedOption")
+              case "Enter":
+                if (!getState().listboxOpen) return
+                event.preventDefault()
+                await dispatch("replaceSearchTextWithSelectedOption")
                 break
-              }
               case "Down":
-              case "ArrowDown": {
+              case "ArrowDown":
+                event.preventDefault()
                 dispatch("openListbox")
                 await dispatch("selectNextOption")
                 scrollToSelectedOption({ getState })
                 break
-              }
               case "Up":
-              case "ArrowUp": {
+              case "ArrowUp":
+                event.preventDefault()
                 dispatch("openListbox")
                 await dispatch("selectPreviousOption")
                 scrollToSelectedOption({ getState })
                 break
-              }
               case "Esc":
-              case "Escape": {
-                const { listboxOpen } = getState()
-
-                if (listboxOpen) {
-                  dispatch("closeListbox")
-                } else {
-                  dispatch("clearSearchInput")
-                }
+              case "Escape":
+                event.preventDefault()
+                await dispatch(getState().listboxOpen ? "closeListbox" : "clearSearchInput")
                 break
-              }
             }
           },
         },
