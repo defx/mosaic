@@ -1,4 +1,4 @@
-import { write } from "./xo.js"
+import { write, writeClasses, writeText } from "./xo.js"
 import type { StateStore } from "./store.js"
 import type { ActionHandlers, EventContext, MosaicConfig } from "./types.js"
 
@@ -30,15 +30,32 @@ export function initialise<
     })
   }
 
+  const initialisedKeys = new Set<string>()
+  const composing = new WeakSet<Element>()
+
   // Register sync first so consumer input handlers see the current state.
   for (const binding of elements) {
     const { sync } = binding
-    if (!sync) continue
+    if (sync === undefined) continue
     for (const target of binding.targets) {
-      const input = target as HTMLInputElement
-      state = { ...state, [sync]: input.value }
-      listen(target, "input", () => {
-        store.patch({ [sync]: input.value } as Partial<State>)
+      const input = syncControl(target)
+      if (!initialisedKeys.has(sync)) {
+        state = { ...state, [sync]: input.value }
+        initialisedKeys.add(sync)
+      }
+      const update = () => {
+        if (store.controller.getState()[sync] !== input.value) {
+          store.patch({ [sync]: input.value } as Partial<State>)
+        }
+      }
+      listen(target, "compositionstart", () => { composing.add(target) })
+      listen(target, "input", (event) => {
+        if ((event as InputEvent).isComposing) composing.add(target)
+        update()
+      })
+      listen(target, "compositionend", () => {
+        composing.delete(target)
+        update()
       })
     }
   }
@@ -69,7 +86,7 @@ export function initialise<
   }
 
   store.initialise(state, (state) => {
-    for (const { targets, attribute, sync } of elements) {
+    for (const { targets, attribute, text, class: classes, sync } of elements) {
       for (const [index, target] of targets.entries()) {
         if (store.isDestroyed()) return
         if (attribute) {
@@ -77,12 +94,36 @@ export function initialise<
           if (store.isDestroyed()) return
           write(target, attributes)
         }
-        if (sync) {
-          const input = target as HTMLInputElement
+        if (text) {
+          const value = text({ state, element: target, index })
+          if (store.isDestroyed()) return
+          writeText(target, value)
+        }
+        if (classes) {
+          const value = classes({ state, element: target, index })
+          if (store.isDestroyed()) return
+          writeClasses(target, value)
+        }
+        if (sync !== undefined && !composing.has(target)) {
+          const input = target as ValueControl
           const value = state[sync] as string
           if (input.value !== value) input.value = value
         }
       }
     }
   })
+}
+
+type ValueControl = HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+
+function syncControl(target: Element): ValueControl {
+  const name = target.localName
+  const control = target as ValueControl
+  const supported = target.namespaceURI === "http://www.w3.org/1999/xhtml" && (
+    name === "textarea" ||
+    (name === "select" && !(control as HTMLSelectElement).multiple) ||
+    (name === "input" && !["checkbox", "radio", "file"].includes((control as HTMLInputElement).type))
+  )
+  if (!supported) throw new TypeError("sync requires a string-valued input, textarea, or single-select control")
+  return control
 }

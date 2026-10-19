@@ -23,7 +23,7 @@ describe("attribution", () => {
           select: "button",
           attribute: () => ({
             hidden: false,
-            ariaExpanded: false,
+            "aria-expanded": "false",
           }),
         },
       ],
@@ -53,7 +53,7 @@ describe("attribution", () => {
           select: `button`,
           attribute: ({ state: { expanded } }) => ({
             hidden: false,
-            ariaExpanded: expanded,
+            "aria-expanded": String(expanded),
           }),
           on: {
             click: "toggle",
@@ -80,7 +80,7 @@ describe("attribution", () => {
         {
           select: "button",
           attribute: () => ({
-            ariaExpanded: false,
+            "aria-expanded": "false",
           }),
         },
       ],

@@ -25,8 +25,8 @@ export const Accordion = () => {
         select: "button[accordion-toggle]",
         attribute: ({ state, index: i }) => ({
           id: `trigger_${id}_${i}`,
-          ariaControls: `panel_${id}_${i}`,
-          ariaExpanded: state.openPanel === i,
+          "aria-controls": `panel_${id}_${i}`,
+          "aria-expanded": String(state.openPanel === i),
         }),
         on: {
           click: "togglePanel",
@@ -36,7 +36,7 @@ export const Accordion = () => {
         select: "[accordion-panel]",
         attribute: ({ state, index: i }) => ({
           id: `panel_${id}_${i}`,
-          ariaLabelledby: `trigger_${id}_${i}`,
+          "aria-labelledby": `trigger_${id}_${i}`,
           hidden: state.openPanel !== i,
           role: "region",
         }),

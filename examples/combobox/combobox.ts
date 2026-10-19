@@ -116,10 +116,10 @@ export const ComboBox = ({ rootNode, $$ }: ExampleContext) => {
           selectedOption,
           listboxOpen,
         } }) => ({
-          ariaAutocomplete: "list",
-          ariaExpanded: listboxOpen,
-          ariaControls: listBoxId,
-          ariaActivedescendant: listboxOpen
+          "aria-autocomplete": "list",
+          "aria-expanded": String(listboxOpen),
+          "aria-controls": listBoxId,
+          "aria-activedescendant": listboxOpen
             ? filteredOptions[selectedOption]?.id || ""
             : "",
           role: "combobox",
@@ -188,8 +188,8 @@ export const ComboBox = ({ rootNode, $$ }: ExampleContext) => {
         attribute: ({ state: { filteredOptions, selectedOption, listboxOpen }, index: i }) => ({
           id: options[i].id,
           hidden: !filteredOptions.includes(options[i]),
-          ariaSelected:
-            listboxOpen && filteredOptions[selectedOption] === options[i],
+          "aria-selected":
+            String(listboxOpen && filteredOptions[selectedOption] === options[i]),
         }),
         on: {
           pointerdown: ({ event }) => event.preventDefault(),

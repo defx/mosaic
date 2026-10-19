@@ -40,8 +40,8 @@ export const Accordion = () => {
         select: "button[accordion-toggle]",
         attribute: ({ state, index: i }) => ({
           id: `trigger_${id}_${i}`,
-          ariaControls: `panel_${id}_${i}`,
-          ariaExpanded: state.openPanel === i,
+          "aria-controls": `panel_${id}_${i}`,
+          "aria-expanded": String(state.openPanel === i),
         }),
         on: {
           click: "togglePanel",
@@ -51,7 +51,7 @@ export const Accordion = () => {
         select: "[accordion-panel]",
         attribute: ({ state, index: i }) => ({
           id: `panel_${id}_${i}`,
-          ariaLabelledby: `trigger_${id}_${i}`,
+          "aria-labelledby": `trigger_${id}_${i}`,
           hidden: state.openPanel !== i,
           role: "region",
         }),
@@ -138,6 +138,70 @@ Promises returned by event handlers are observed: errors are reported through th
 browser's `reportError`, while dispatch cancellations caused by destruction are
 ignored. Consumer-created timers, listeners, and asynchronous work remain the
 consumer's responsibility to clean up.
+
+## DOM bindings
+
+`attribute` returns attribute names exactly as they appear in the DOM, such as
+`"aria-expanded"`, `"data-state"`, and `tabindex`. Strings and numbers set attribute
+values; `true` sets an empty presence attribute. `false`, `null`, and `undefined`
+remove an attribute. Use strings for string-valued booleans, including ARIA states:
+
+```js
+{
+  select: "button",
+  attribute: ({ state }) => ({
+    "aria-expanded": String(state.open),
+    disabled: state.busy,
+  }),
+  text: ({ state }) => state.label,
+  class: ({ state }) => ({ active: state.open }),
+}
+```
+
+`text` writes plain text content. Strings, numbers, and booleans become text;
+`null` and `undefined` become empty text. This replaces the element's existing
+content, including child elements.
+
+`class` returns a map of class names to booleans. Each returned name is added or
+removed according to its value. Unrelated classes and names omitted from later
+results remain untouched. Attribute names omitted from a result also remain
+untouched.
+
+## Two-way values with sync
+
+Use `sync` to bind a string state field to a control's live value:
+
+```js
+{
+  select: "input.search",
+  sync: "query",
+  on: {
+    input: ({ state, dispatch }) => {
+      // state.query already contains the current input value.
+      dispatch("search", state.query);
+    },
+  },
+}
+```
+
+At mount, the DOM supplies the initial value. When several controls share a state
+key, the first bound control supplies the value and the others mirror it. Binding
+order follows the `elements` array, then document order within each selector's
+matches. Keys with no matching controls retain their configured state.
+
+Input events update state before consumer `on.input` handlers run. State changes
+from actions update control values in the next render, including clearing them
+with an empty string. Equal values are left untouched to preserve cursor position.
+
+During IME composition, input events continue updating state, but rendering leaves
+the composing control's value untouched. Other controls sharing the key can still
+update. When composition ends, the final DOM value is committed to state and
+mirrored to the other controls.
+
+Supported controls are string-valued inputs, textareas, and single-select controls.
+Checkboxes, radio buttons, file inputs, and multi-selects cannot use `sync` and
+cause a mount error. Values remain strings; numeric conversion and form-reset
+handling belong in consumer code.
 
 ## Install
 

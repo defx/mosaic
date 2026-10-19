@@ -51,8 +51,8 @@ export const Tabs = ({ $$ }: Pick<ExampleContext, "$$">) => {
       {
         select: TABS,
         attribute: ({ state, index: i }) => ({
-          ariaSelected: i === state.selectedTab,
-          tabIndex: i === state.selectedTab ? null : -1,
+          "aria-selected": String(i === state.selectedTab),
+          "tabindex": i === state.selectedTab ? null : -1,
         }),
         on: {
           keydown: ({ event, dispatch }) => {

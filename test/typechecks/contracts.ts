@@ -93,3 +93,39 @@ Mosaic(document.createElement("div"), { state: { label: "" }, elements: [{
     return { title: `${name}:${order}:${state.label}` }
   },
 }] })
+
+Mosaic(document.createElement("div"), {
+  state: { label: "", active: false },
+  elements: [{
+    select: "output",
+    text: ({ state, element, index }) => `${element.tagName}:${index}:${state.label}`,
+    class: ({ state }) => ({ active: state.active }),
+    attribute: () => ({ "aria-expanded": "false", hidden: false, "data-count": 0 }),
+  }],
+})
+
+Mosaic(document.createElement("div"), { elements: [{
+  select: "input",
+  // @ts-expect-error Attribute values must be primitive values, not DOM properties.
+  attribute: () => ({ value: { nested: true } }),
+}] })
+Mosaic(document.createElement("div"), { elements: [{
+  select: "output",
+  // @ts-expect-error Text bindings require a primitive text value.
+  text: () => ({ label: "invalid" }),
+}] })
+Mosaic(document.createElement("div"), { elements: [{
+  select: "button",
+  // @ts-expect-error Class maps use boolean values.
+  class: () => ({ active: "yes" }),
+}] })
+Mosaic(document.createElement("div"), { state: { count: 0 }, elements: [{
+  select: "input",
+  // @ts-expect-error Sync requires a string-valued state key.
+  sync: "count",
+}] })
+Mosaic(document.createElement("div"), { elements: [{
+  select: "input",
+  // @ts-expect-error General property bindings are not part of the API.
+  property: () => ({ value: "invalid" }),
+}] })

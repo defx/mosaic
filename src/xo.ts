@@ -1,65 +1,23 @@
-import { isPrimitive } from "./helpers.js"
-import type { Attributes } from "./types.js"
+import type { Attributes, Classes, TextValue } from "./types.js"
 
-const pascalToKebab = (string: string) =>
-  string.replace(/[\w]([A-Z])/g, function (m) {
-    return m[0] + "-" + m[1].toLowerCase()
-  })
-
-const kebabToPascal = (string: string) =>
-  string.replace(/[\w]-([\w])/g, function (m) {
-    return m[0] + m[2].toUpperCase()
-  })
-
-export const objectToClasses = (v: Record<string, unknown> = {}) => {
-  return Object.entries(v)
-    .reduce<string[]>((c, [k, v]) => {
-      if (v) c.push(k)
-      return c
-    }, [])
-    .join(" ")
-}
-
-export const objectFromClasses = (v = "") => {
-  return v
-    .split(/\s+/)
-    .filter((v) => v)
-    .reduce<Record<string, boolean>>((o, k) => {
-      o[k] = true
-      return o
-    }, {})
-}
-
-export const write = (node: Element, attrs: Attributes | null | undefined) => {
-  for (let [k, v] of Object.entries(attrs || {})) {
-    k = pascalToKebab(k)
-
-    if (k === "class") {
-      v = objectToClasses(v as Record<string, unknown>)
-    }
-
-    if (typeof v === "boolean") {
-      if (k.startsWith("aria-")) {
-        v = "" + v
-      } else if (v) {
-        v = ""
-      }
-    }
-
-    if (isPrimitive(v) === false) {
-      ;(node as unknown as Record<string, unknown>)[kebabToPascal(k)] = v
-      continue
-    }
-
-    let current = node.getAttribute(k)
-
-    if (v === current) continue
-
-    if (typeof v === "string" || typeof v === "number") {
-      node.setAttribute(k, String(v))
+export function write(node: Element, attributes: Attributes | null | undefined) {
+  for (const [name, value] of Object.entries(attributes ?? {})) {
+    if (value === false || value == null) {
+      if (node.hasAttribute(name)) node.removeAttribute(name)
     } else {
-      node.removeAttribute(k)
+      const text = value === true ? "" : String(value)
+      if (node.getAttribute(name) !== text) node.setAttribute(name, text)
     }
   }
-  return node
+}
+
+export function writeText(node: Element, value: TextValue) {
+  const text = value == null ? "" : String(value)
+  if (node.textContent !== text) node.textContent = text
+}
+
+export function writeClasses(node: Element, classes: Classes | null | undefined) {
+  for (const [name, enabled] of Object.entries(classes ?? {})) {
+    node.classList.toggle(name, enabled)
+  }
 }

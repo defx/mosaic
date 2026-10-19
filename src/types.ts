@@ -22,7 +22,10 @@ export interface Controller<State extends object, Actions = {}> {
   subscribe(callback: (state: State) => void): () => void
 }
 
-export type Attributes = Record<string, unknown>
+export type AttributeValue = string | number | boolean | null | undefined
+export type Attributes = Record<string, AttributeValue>
+export type TextValue = string | number | boolean | null | undefined
+export type Classes = Record<string, boolean>
 
 export type StringKey<State> = {
   [Key in keyof State]-?: State[Key] extends string ? Key : never
@@ -54,6 +57,8 @@ export type EventBindings<State extends object, Actions> = {
 export interface ElementConfig<State extends object, Actions = {}> {
   select: string
   attribute?: (context: RenderContext<State>) => Attributes | null | undefined
+  text?: (context: RenderContext<State>) => TextValue
+  class?: (context: RenderContext<State>) => Classes | null | undefined
   on?: EventBindings<State, Actions>
   sync?: StringKey<State>
 }
