@@ -1,20 +1,11 @@
-import { define } from "../../src/define.js"
+import { afterEach, assert, beforeEach, describe, it } from "vitest"
+import { Mosaic } from "../../src/index.js"
+import { nextFrame } from "../../test/helpers/browser.js"
 import { ComboBox } from "./combobox.js"
 
 const states =
   `Alabama,Alaska,American Samoa,Arizona,Arkansas,California,ColoradoConnecticut,Delaware,District of Columbia,Florida,Georgia,Guam,Hawaii,Idaho,Illinois,Indiana,Iowa,Kansas,Kentucky,Louisiana,Maine,Maryland,Massachusetts,Michigan,Minnesota,Mississippi,Missouri,Montana,Nebraska,Nevada,New Hampshire,New Jersey,New Mexico,New York,North Carolina,North Dakota,Northern Marianas Islands,Ohio,Oklahoma,Oregon,Pennsylvania,Puerto Rico,Rhode Island,South Carolina,South Dakota,Tennessee,Texas,Utah,Vermont,Virginia,Virgin Islands,Washington,West Virginia,Wisconsin,Wyoming`
     .split(",")
-    .map((value) => ({ id: `option_${value}`, value }))
-
-const optionTemplate = ({ id, value }) =>
-  `<li id="${id}" role="option">${value}</li>`
-
-define("combobox-example", (api) => {
-  return ComboBox({
-    optionTemplate,
-    options: states,
-  })(api)
-})
 
 describe("combo-box", () => {
   let rootNode
@@ -28,11 +19,14 @@ describe("combo-box", () => {
     document.body.removeChild(rootNode)
   })
 
-  function mount() {
+  function mount(options = states) {
     rootNode.innerHTML = /* html */ `
     <style>
-      combobox-example {
+      [role="listbox"] [role="option"] {
         display: block;
+      }
+      [role="listbox"] [role="option"][hidden] {
+        display: none;
       }
       [role="option"][aria-selected="true"],
       [role="listbox"] [role="option"]:hover {
@@ -40,28 +34,56 @@ describe("combo-box", () => {
         color: #111;
       }
     </style>
-    <combobox-example>
+    <div data-combobox>
       <label for="text-input">
           State
       </label>
       <input id="text-input" type="text" role="combobox">
-      <ul aria-label="States" role="listbox"></ul>
-    </combobox-example>`
+      <ul aria-label="States" role="listbox">${options
+        .map((value) => `<li role="option">${value}</li>`)
+        .join("")}</ul>
+    </div>`
+    const node = rootNode.querySelector("[data-combobox]")
+    const optionNodes = [...node.querySelectorAll('[role="option"]')]
+    Mosaic(
+      node,
+      ComboBox({
+        rootNode: node,
+        $$: (query) => [...node.querySelectorAll(query)],
+      })
+    )
+    return optionNodes
   }
 
   const select = {
     get combobox() {
-      return document.querySelector(`combobox-example`)
+      return rootNode.querySelector("[data-combobox]")
     },
     get input() {
-      return document.querySelector(`input[type=text][role=combobox]`)
+      return rootNode.querySelector(`input[type=text][role=combobox]`)
     },
     get listbox() {
-      return document.querySelector(`[role=listbox]`)
+      return rootNode.querySelector(`[role=listbox]`)
     },
     get options() {
-      return [...document.querySelectorAll(`[role=listbox] [role=option]`)]
+      return [
+        ...rootNode.querySelectorAll(`[role=listbox] [role=option]:not([hidden])`),
+      ]
     },
+    get allOptions() {
+      return [...rootNode.querySelectorAll(`[role=listbox] [role=option]`)]
+    },
+  }
+
+  async function search(value) {
+    select.input.value = value
+    select.input.dispatchEvent(new Event("input", { bubbles: true }))
+    await nextFrame()
+  }
+
+  async function press(key, type = "keyup") {
+    select.input.dispatchEvent(new KeyboardEvent(type, { key, bubbles: true }))
+    await nextFrame()
   }
 
   it(`sets [role="combobox"] on the input`, () => {
@@ -404,5 +426,155 @@ describe("combo-box", () => {
     await nextFrame()
 
     assert.equal(input.value, textContent)
+  })
+
+  it("hides nonmatching options without overriding their display styling", async () => {
+    mount(["Alabama", "New York", "New Jersey", "Ohio"])
+
+    await search("NEW")
+
+    assert.deepEqual(select.options.map((node) => node.textContent), [
+      "New York",
+      "New Jersey",
+    ])
+    assert.lengthOf(select.allOptions, 4)
+    assert.equal(getComputedStyle(select.allOptions[0]).display, "none")
+    assert.equal(getComputedStyle(select.options[0]).display, "block")
+  })
+
+  it("preserves every option node and its order throughout filtering and selection", async () => {
+    const originalNodes = mount(["Alabama", "New York", "New Jersey", "Ohio"])
+    const ids = originalNodes.map((node) => node.id)
+    const mutations = []
+    const observer = new MutationObserver((records) => mutations.push(...records))
+    observer.observe(select.listbox, { childList: true, subtree: true })
+
+    try {
+      for (const value of ["new", "zzzz", "", "o"]) {
+        await search(value)
+      }
+      await press("ArrowDown")
+      await press("Enter")
+      await press("Escape")
+
+      const currentNodes = select.allOptions
+      assert.lengthOf(currentNodes, originalNodes.length)
+      currentNodes.forEach((node, i) => assert.strictEqual(node, originalNodes[i]))
+      assert.deepEqual(currentNodes.map((node) => node.id), ids)
+      assert.lengthOf([...mutations, ...observer.takeRecords()], 0)
+    } finally {
+      observer.disconnect()
+    }
+  })
+
+  it("navigates, highlights, and scrolls only matching options", async () => {
+    mount(["Alabama", "New York", "Ohio", "New Jersey"])
+    select.input.focus()
+    await search("new")
+    const [first, last] = select.options
+    const scrolled = []
+    select.allOptions.forEach((node) => {
+      node.scrollIntoView = () => scrolled.push(node)
+    })
+
+    for (const [key, expected] of [
+      ["ArrowDown", first],
+      ["ArrowDown", last],
+      ["ArrowDown", first],
+      ["ArrowUp", last],
+    ]) {
+      await press(key)
+      assert.equal(select.input.getAttribute("aria-activedescendant"), expected.id)
+      assert.equal(expected.getAttribute("aria-selected"), "true")
+      assert.strictEqual(scrolled.at(-1), expected)
+      assert.equal(select.listbox.querySelectorAll('[aria-selected="true"]').length, 1)
+    }
+    assert.strictEqual(document.activeElement, select.input)
+  })
+
+  it("commits a filtered selection with Enter and closes the popup", async () => {
+    mount(["Alabama", "New York", "New Jersey"])
+    await search("new")
+    await press("ArrowDown")
+    await press("Enter")
+
+    assert.equal(select.input.value, "New York")
+    assert.equal(select.input.getAttribute("aria-expanded"), "false")
+    assert.notOk(select.input.getAttribute("aria-activedescendant"))
+    assert.isTrue(select.listbox.hidden)
+    assert.equal(select.listbox.querySelectorAll('[aria-selected="true"]').length, 0)
+  })
+
+  it("selects a clicked option using its position in the filtered set", async () => {
+    mount(["Alabama", "New York", "Ohio", "New Jersey"])
+    await search("new")
+    const option = select.options[1]
+    const pointerdown = new PointerEvent("pointerdown", {
+      bubbles: true,
+      cancelable: true,
+    })
+    option.dispatchEvent(pointerdown)
+    assert.isTrue(pointerdown.defaultPrevented)
+    option.click()
+    await nextFrame()
+
+    assert.equal(select.input.value, "New Jersey")
+    assert.isTrue(select.listbox.hidden)
+    assert.strictEqual(document.activeElement, select.input)
+  })
+
+  it("clears the query and restores the fixed options without reopening the popup", async () => {
+    mount(["Alabama", "New York", "Ohio"])
+    await search("new")
+    await press("ArrowDown")
+    await press("Escape")
+    assert.equal(select.input.value, "new")
+    assert.notOk(select.input.getAttribute("aria-activedescendant"))
+    await press("Escape")
+
+    assert.equal(select.input.value, "")
+    assert.lengthOf(select.options, 3)
+    assert.isTrue(select.listbox.hidden)
+  })
+
+  it("resets the active option when the query changes", async () => {
+    mount(["Alabama", "New York", "Ohio"])
+    await search("new")
+    await press("ArrowDown")
+    assert.ok(select.input.getAttribute("aria-activedescendant"))
+    await search("o")
+
+    assert.notOk(select.input.getAttribute("aria-activedescendant"))
+    assert.equal(select.listbox.querySelectorAll('[aria-selected="true"]').length, 0)
+    await press("ArrowDown")
+    assert.equal(select.input.getAttribute("aria-activedescendant"), select.options[0].id)
+  })
+
+  it("leaves unmatched text unchanged when navigating or committing with no results", async () => {
+    mount(["Alabama", "New York", "Ohio"])
+    await search("zzzz")
+
+    for (const key of ["ArrowDown", "ArrowUp", "Enter"]) {
+      await press(key)
+      assert.lengthOf(select.options, 0)
+      assert.lengthOf(select.allOptions, 3)
+      assert.notOk(select.input.getAttribute("aria-activedescendant"))
+      assert.equal(select.input.value, "zzzz")
+    }
+    await press("Tab", "keydown")
+    assert.equal(select.input.value, "zzzz")
+    assert.isTrue(select.listbox.hidden)
+  })
+
+  it("supports an initially empty option list", async () => {
+    mount([])
+    await press("ArrowDown")
+    await press("ArrowUp")
+    await press("Enter")
+
+    assert.lengthOf(select.allOptions, 0)
+    assert.equal(select.input.value, "")
+    assert.notOk(select.input.getAttribute("aria-activedescendant"))
+    assert.isTrue(select.listbox.hidden)
   })
 })

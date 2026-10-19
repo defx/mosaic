@@ -7,10 +7,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Accordion</title>
     <style>
-        x-accordion {
-            display: block
-        }
-
         .accordion {
             margin: 0 auto;
             padding: 0;
@@ -139,7 +135,7 @@
 
 <body>
 
-    <x-accordion id="accordionGroup" class="accordion">
+    <div data-accordion id="accordionGroup" class="accordion">
         <h3>
             <button type="button" class="accordion-trigger" accordion-toggle>
                 <span class="accordion-title">
@@ -247,7 +243,7 @@
                 </fieldset>
             </div>
         </div>
-    </x-accordion>
+    </div>
 
     <script type="module" src="index.js"></script>
 

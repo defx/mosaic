@@ -1,4 +1,5 @@
-import { define } from "../src/define.js"
+import { Mosaic } from "../../src/index.js"
 import { Tabs } from "./tabs.js"
 
-define("tabs-example", Tabs)
+const rootNode = document.querySelector("[data-tabs]")
+Mosaic(rootNode, Tabs({ $$: (query) => [...rootNode.querySelectorAll(query)] }))

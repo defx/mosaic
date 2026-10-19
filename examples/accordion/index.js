@@ -1,4 +1,4 @@
-import { define } from "../src/define.js"
+import { Mosaic } from "../../src/index.js"
 import { Accordion } from "./accordion.js"
 
-define("x-accordion", Accordion)
+Mosaic(document.querySelector("[data-accordion]"), Accordion())

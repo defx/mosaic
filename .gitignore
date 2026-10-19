@@ -1,5 +1,6 @@
 .DS_Store
 coverage
+.vitest/
 node_modules
 dist
 cjs
@@ -7,3 +8,4 @@ scratch*
 examples/dynamo.js
 types
 TODO.md
+reviews/

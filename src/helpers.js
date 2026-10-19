@@ -38,17 +38,3 @@ export const findIndex = (node, query) => {
   const collection = [...rootNode.querySelectorAll(query)]
   return collection.findIndex((n) => n === node)
 }
-
-export function nodeFromString(str) {
-  const doc = new DOMParser().parseFromString(str.trim(), "text/html", {
-    includeShadowRoots: true, // @todo: required?
-  })
-
-  const errorNode = doc.querySelector("parsererror")
-
-  if (errorNode) {
-    // @todo ...
-  } else {
-    return doc.head.firstChild || doc.body.firstChild
-  }
-}

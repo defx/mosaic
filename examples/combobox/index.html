@@ -75,6 +75,10 @@
             padding-bottom: 2px;
         }
 
+        ul[role="listbox"] li[role="option"][hidden] {
+            display: none;
+        }
+
         /* focus and hover styling */
 
         .combobox .group.focus,
@@ -110,7 +114,7 @@
 
 <body>
 
-    <combobox-example>
+    <div data-combobox>
         <label for="cb1-input">
             State
         </label>
@@ -128,7 +132,7 @@
             <ul aria-label="States" role="listbox">
             </ul>
         </div>
-    </combobox-example>
+    </div>
 
 
     <script type="module" src="index.js"></script>

@@ -1,11 +1,6 @@
-import { define } from "../../src/define.js"
+import { afterEach, assert, beforeEach, describe, it } from "vitest"
+import { Mosaic } from "../../src/index.js"
 import { Tabs } from "./tabs.js"
-
-define("tabs-example", (api) => {
-  return Tabs({
-    // ...
-  })(api)
-})
 
 describe("tabs", () => {
   let rootNode
@@ -21,7 +16,7 @@ describe("tabs", () => {
 
   function mount() {
     rootNode.innerHTML = /* html */ `
-    <div class="tabs">
+    <div data-tabs class="tabs">
     <h3 id="tablist-1">
         Danish Composers
     </h3>
@@ -86,16 +81,19 @@ describe("tabs", () => {
             Brahms; and his Danish countrymen, including J.P.E. Hartmann.
         </p>
     </div>
-    `
+    </div>`
+    const node = rootNode.querySelector("[data-tabs]")
+    Mosaic(node, Tabs({ $$: (query) => [...node.querySelectorAll(query)] }))
   }
 
   const select = {
     get tabs() {
-      return document.querySelector(`tabs-example`)
+      return rootNode.querySelector("[data-tabs]")
     },
   }
 
-  it(`...`, () => {
+  // TODO (chunk 7): replace this smoke test with real tabs interaction tests.
+  it("placeholder: mounts tabs; interaction coverage follows in chunk 7", () => {
     mount()
     assert.equal(1, 1)
   })

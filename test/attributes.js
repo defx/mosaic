@@ -1,4 +1,6 @@
+import { afterEach, assert, beforeEach, describe, it } from "vitest"
 import { Mosaic } from "../src/index.js"
+import { html, nextFrame } from "./helpers/browser.js"
 
 describe("attribution", () => {
   let rootNode

@@ -1,4 +1,3 @@
-import { listItems, listData, listSync } from "./list.js"
 import { write } from "./xo.js"
 
 const matchGlobalSelector = (q) => q.match(/^:global\(([^)].+)\)$/)?.[1]
@@ -86,20 +85,6 @@ export function initialise(rootNode, config, store) {
   })
 
   const onChange = (state) => {
-    // lists first
-    elements
-      .filter(({ list }) => list)
-      .forEach(({ list, getNodes }) => {
-        const targets = getNodes()
-        targets.forEach((target) => {
-          const items = listItems(target, list.select)
-          const curr = listData(items)
-          const next = state[list.from]
-          listSync(target, items, curr, next, list.template)
-        })
-      })
-
-    // then the rest...
     elements.forEach((c) => {
       const { attribute, sync, getNodes } = c
 
