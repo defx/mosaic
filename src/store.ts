@@ -11,6 +11,8 @@ export interface StateStore<State extends object, Actions> {
   controller: Controller<State, Actions>
   initialise(state: State, render: (state: State) => void): void
   patch(state: Partial<State>): void
+  own(cleanup: () => void): void
+  isDestroyed(): boolean
 }
 
 export function Store<
@@ -24,6 +26,10 @@ export function Store<
   let render: (state: State) => void
   let frame: number | null = null
   let pending: Completion[] = []
+  let active: Completion[] = []
+  let destroyed = false
+  const cleanups: (() => void)[] = []
+  const abort = () => new DOMException("Mosaic has been destroyed", "AbortError")
   const message = Message<[State]>()
 
   function commit(next: State) {
@@ -35,13 +41,15 @@ export function Store<
   }
 
   function schedule() {
-    if (frame === null) frame = requestAnimationFrame(flush)
+    if (!destroyed && frame === null) frame = requestAnimationFrame(flush)
   }
 
   function flush() {
     frame = null
+    if (destroyed) return
     const completions = pending
     pending = []
+    active = completions
     const snapshot = getState()
     const errors: unknown[] = []
 
@@ -50,7 +58,9 @@ export function Store<
     } catch (error) {
       errors.push(error)
     }
-    errors.push(...message.publish(snapshot))
+    if (!destroyed) errors.push(...message.publish(snapshot))
+    active = []
+    if (destroyed) return
 
     if (errors.length) {
       const error = errors.length === 1
@@ -66,6 +76,7 @@ export function Store<
 
   const dispatch: Dispatch<Actions> = (type, ...payload) => {
     try {
+      if (destroyed) throw abort()
       if (!Object.hasOwn(actionHandlers, type)) {
         throw new Error(`Unknown action "${type}"`)
       }
@@ -76,7 +87,9 @@ export function Store<
         state: State,
         payload: unknown,
       ) => State
-      commit(handler.call(actionHandlers, getState(), payload[0]))
+      const next = handler.call(actionHandlers, getState(), payload[0])
+      if (destroyed) throw abort()
+      commit(next)
 
       return new Promise<void>((resolve, reject) => {
         pending.push({ resolve, reject })
@@ -90,17 +103,34 @@ export function Store<
   const controller: Controller<State, Actions> = {
     dispatch,
     getState,
-    subscribe: message.subscribe,
+    subscribe: (callback) => destroyed ? () => {} : message.subscribe(callback),
+    destroy() {
+      if (destroyed) return
+      destroyed = true
+      if (frame !== null) cancelAnimationFrame(frame)
+      frame = null
+      const error = abort()
+      const completions = [...active, ...pending]
+      completions.forEach(({ reject }) => reject(error))
+      active = []
+      pending = []
+      message.clear()
+      cleanups.splice(0).forEach((cleanup) => cleanup())
+      render = () => {}
+    },
   }
 
   return {
     controller,
+    own: (cleanup) => { cleanups.push(cleanup) },
+    isDestroyed: () => destroyed,
     initialise: (initial: State, onChange: (state: State) => void) => {
       commit(initial)
       render = onChange
       render(getState())
     },
     patch: (patch: Partial<State>) => {
+      if (destroyed) return
       commit({ ...getState(), ...patch })
       schedule()
     },

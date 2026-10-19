@@ -18,6 +18,7 @@ export type Dispatch<Actions> = <Name extends keyof Actions & string>(
 export interface Controller<State extends object, Actions = {}> {
   dispatch: Dispatch<Actions>
   getState(): State
+  destroy(): void
   subscribe(callback: (state: State) => void): () => void
 }
 
@@ -27,22 +28,32 @@ export type StringKey<State> = {
   [Key in keyof State]-?: State[Key] extends string ? Key : never
 }[keyof State] & string
 
-export type EventBindings<State extends object, Actions> = {
-  [Name in keyof HTMLElementEventMap]?:
-    | (keyof Actions & string)
-    | ((
-        event: HTMLElementEventMap[Name],
-        store: Controller<State, Actions>,
-        index: number,
-      ) => void | Promise<void>)
+export interface RenderContext<State extends object> {
+  state: State
+  element: Element
+  index: number
 }
 
-type Selector =
-  | { select: string; selectAll?: never }
-  | { selectAll: string; select?: never }
+export interface EventContext<State extends object, Actions = {}, E extends Event = Event> {
+  state: State
+  element: Element
+  index: number
+  event: E
+  dispatch: Dispatch<Actions>
+  getState(): State
+}
 
-export type ElementConfig<State extends object, Actions = {}> = Selector & {
-  attribute?: (state: State, index: number) => Attributes | null | undefined
+type Events = HTMLElementEventMap
+
+export type EventBindings<State extends object, Actions> = {
+  [Name in keyof Events]?:
+    | (keyof Actions & string)
+    | ((context: EventContext<State, Actions, Events[Name]>) => void | Promise<void>)
+}
+
+export interface ElementConfig<State extends object, Actions = {}> {
+  select: string
+  attribute?: (context: RenderContext<State>) => Attributes | null | undefined
   on?: EventBindings<State, Actions>
   sync?: StringKey<State>
 }

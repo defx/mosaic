@@ -30,15 +30,15 @@ export const Accordion = () => {
       openPanel: 0,
     },
     actions: {
-      togglePanel: (state, i) => ({
+      togglePanel: (state, { index: i }) => ({
         ...state,
         openPanel: state.openPanel === i ? -1 : i,
       }),
     },
     elements: [
       {
-        selectAll: "button[accordion-toggle]",
-        attribute: (state, i) => ({
+        select: "button[accordion-toggle]",
+        attribute: ({ state, index: i }) => ({
           id: `trigger_${id}_${i}`,
           ariaControls: `panel_${id}_${i}`,
           ariaExpanded: state.openPanel === i,
@@ -48,8 +48,8 @@ export const Accordion = () => {
         },
       },
       {
-        selectAll: "[accordion-panel]",
-        attribute: (state, i) => ({
+        select: "[accordion-panel]",
+        attribute: ({ state, index: i }) => ({
           id: `panel_${id}_${i}`,
           ariaLabelledby: `trigger_${id}_${i}`,
           hidden: state.openPanel !== i,
@@ -71,14 +71,14 @@ const controller = Mosaic(rootNode, Accordion());
 ```
 
 Mosaic enhances the supplied node and returns a controller with `dispatch`,
-`getState`, and `subscribe`. Dispatch actions to update state.
+`getState`, `subscribe`, and `destroy`. Dispatch actions to update state.
 
 ```js
 const unsubscribe = controller.subscribe((state) => {
   console.log(state.openPanel);
 });
 
-await controller.dispatch("togglePanel", 1);
+await controller.dispatch("togglePanel", { index: 1 });
 // The DOM now reflects the completed batch.
 unsubscribe();
 ```
@@ -101,6 +101,43 @@ are combined in an `AggregateError`. Committed state is retained after publicati
 errors, and failed rendering may leave the DOM partially updated. Errors from
 `sync`-only batches, which have no dispatch promise, are reported through the
 browser's `reportError` function.
+
+## Selectors, events, and cleanup
+
+Each binding's `select` is a CSS selector that matches every matching descendant
+of the mounting root. Matches are captured once at mount; callback indexes follow
+their original document order. An empty match set is valid. Later additions and
+changes to selector membership do not change the captured bindings.
+
+The mounting root itself is excluded. Use `:scope` in selectors to express
+relationships to the root, such as `:scope > button` for direct children.
+Handle root-level, document, or window events in consumer code—for example, an
+outside-click listener can check `rootNode.contains(event.target)` before dispatching
+an action. Remove consumer-owned listeners when disposing of the enhancement.
+
+Rendering callbacks receive `{ state, element, index }`. Event callbacks receive
+`{ state, element, index, event, dispatch, getState }`. `element` is the bound target;
+`event.target` may be a descendant. `state` is a snapshot taken when the listener
+runs; `getState()` reads the latest state after any actions dispatched by the handler.
+An action name such as `on: { click: "togglePanel" }` forwards the whole event
+context as the reducer's payload.
+
+Listeners attach directly to matching elements and follow ordinary DOM event
+propagation. With overlapping or nested bindings, a bubbling event can invoke
+several listeners. Choose selectors and use event propagation controls to suit
+your interface; nested components do not receive automatic event isolation.
+
+Call `controller.destroy()` when the enhancement is no longer needed. Destruction
+is idempotent: it removes Mosaic's listeners and subscriptions, cancels pending
+rendering, and rejects pending or subsequent dispatches with `AbortError`.
+`getState()` remains readable, and subscribing after destruction returns a no-op
+unsubscribe function. Cleanup leaves the current DOM content in place. The same
+nodes can then be bound to a new controller.
+
+Promises returned by event handlers are observed: errors are reported through the
+browser's `reportError`, while dispatch cancellations caused by destruction are
+ignored. Consumer-created timers, listeners, and asynchronous work remain the
+consumer's responsibility to clean up.
 
 ## Install
 
@@ -136,5 +173,5 @@ Tests run in headless Chromium through Vitest Browser Mode and Playwright.
 
 TypeScript infers state and action names; annotate reducer
 payloads such as `(state, amount: number) => ...`. Action-name event shorthand
-passes a numeric DOM index; use a callback to supply a different payload.
+passes the event context; use a callback to supply a different payload.
 

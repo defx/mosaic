@@ -9,7 +9,7 @@ let counter = 0
 export const Accordion = () => {
   const id = counter++
   const actions = {
-    togglePanel: (state: AccordionState, i: number) => ({
+    togglePanel: (state: AccordionState, { index: i }: { index: number }) => ({
       ...state,
       openPanel: state.openPanel === i ? -1 : i,
     }),
@@ -23,7 +23,7 @@ export const Accordion = () => {
     elements: [
       {
         select: "button[accordion-toggle]",
-        attribute: (state, i) => ({
+        attribute: ({ state, index: i }) => ({
           id: `trigger_${id}_${i}`,
           ariaControls: `panel_${id}_${i}`,
           ariaExpanded: state.openPanel === i,
@@ -34,7 +34,7 @@ export const Accordion = () => {
       },
       {
         select: "[accordion-panel]",
-        attribute: (state, i) => ({
+        attribute: ({ state, index: i }) => ({
           id: `panel_${id}_${i}`,
           ariaLabelledby: `trigger_${id}_${i}`,
           hidden: state.openPanel !== i,

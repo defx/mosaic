@@ -12,15 +12,15 @@ const controller = Mosaic(document.createElement("div"), {
     {
       select: "input",
       sync: "label",
-      attribute: (state) => ({ title: state.label }),
+      attribute: ({ state }) => ({ title: state.label }),
       on: {
-        keydown: (event, store) => {
+        keydown: ({ event, dispatch, getState }) => {
           const key: string = event.key
-          store.dispatch("rename", key)
+          dispatch("rename", key)
           // @ts-expect-error Event handlers retain action payload types.
-          store.dispatch("increment", "wrong")
+          dispatch("increment", "wrong")
           // @ts-expect-error Event handlers retain the state shape.
-          store.getState().missing
+          getState().missing
         },
       },
     },
@@ -58,3 +58,38 @@ controller.merge({ count: 1 })
 
 void count
 void label
+
+controller.destroy()
+
+Mosaic(document.createElement("div"), {
+  state: { count: 0 },
+  actions: { increment: (state) => ({ count: state.count + 1 }) },
+  elements: [{
+    select: "button",
+    on: { keydown: ({ event, state, element, index, dispatch, getState }) => {
+      const key: string = event.key
+      const tag: string = element.tagName
+      const count: number = state.count + getState().count + index
+      dispatch("increment")
+      // @ts-expect-error Keyboard events retain their specific type.
+      event.pointerId
+      void [key, count, tag]
+    } },
+  }],
+})
+
+Mosaic(document.createElement("div"), { elements: [{
+  // @ts-expect-error Bindings require CSS selector strings.
+  select: document,
+}] })
+
+Mosaic(document.createElement("div"), { state: { label: "" }, elements: [{
+  select: "input",
+  attribute: ({ state, element, index }) => {
+    const name: string = element.tagName
+    const order: number = index
+    // @ts-expect-error Rendering contexts retain the state shape.
+    state.missing
+    return { title: `${name}:${order}:${state.label}` }
+  },
+}] })

@@ -25,7 +25,7 @@ function counter(onRender?: (count: number) => void) {
     },
     elements: [{
       select: "output",
-      attribute: (state) => {
+      attribute: ({ state }) => {
         onRender?.(state.count)
         return { "data-count": state.count }
       },
@@ -44,7 +44,7 @@ describe("state publication", () => {
     const { controller, output } = counter()
     assert.deepEqual(controller.getState(), { count: 0 })
     assert.equal(output.getAttribute("data-count"), "0")
-    assert.deepEqual(Object.keys(controller).sort(), ["dispatch", "getState", "subscribe"])
+    assert.deepEqual(Object.keys(controller).sort(), ["destroy", "dispatch", "getState", "subscribe"])
   })
 
   it("commits consecutive actions immediately and renders their final state once", async () => {
@@ -270,9 +270,9 @@ describe("binding-owned state updates", () => {
         {
           select: "input",
           sync: "query",
-          on: { input: (_, store) => { observed.push(store.getState().query) } },
+          on: { input: ({ getState }) => { observed.push(getState().query) } },
         },
-        { select: "output", attribute: (state) => ({ "data-query": state.query }) },
+        { select: "output", attribute: ({ state }) => ({ "data-query": state.query }) },
       ],
     })
     assert.equal(controller.getState().query, "DOM")
@@ -304,7 +304,7 @@ describe("binding-owned state updates", () => {
       elements: [{
         select: "input",
         sync: "query",
-        attribute: (state) => {
+        attribute: ({ state }) => {
           if (state.query === "bad") throw failure
           return { "data-query": state.query }
         },

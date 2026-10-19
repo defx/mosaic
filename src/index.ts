@@ -4,6 +4,8 @@ import type { ActionHandlers, Controller, MosaicConfig } from "./types.js"
 
 export type {
   ActionHandlers,
+  RenderContext,
+  EventContext,
   Attributes,
   Controller,
   Dispatch,
@@ -18,14 +20,19 @@ export const Mosaic = <
   State extends object = Record<string, never>,
   Actions extends ActionHandlers<State> = {},
 >(
-  node: Element,
+  rootNode: Element,
   config: MosaicConfig<State, Actions>,
 ): Controller<State, Actions> => {
   const store = Store<State, Actions>({
     ...config,
   })
 
-  initialise(node, config, store)
+  try {
+    initialise(rootNode, config, store)
+  } catch (error) {
+    store.controller.destroy()
+    throw error
+  }
 
   return store.controller
 }

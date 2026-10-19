@@ -1,7 +1,6 @@
-import { afterEach, assert, beforeEach, describe, it } from "vitest"
-import { Mosaic } from "../../src/index.js"
+import { afterEach, assert, beforeEach, describe, it, vi } from "vitest"
 import { nextFrame } from "../../test/helpers/browser.js"
-import { ComboBox } from "./combobox.js"
+import { mountComboBox } from "./combobox.js"
 
 const states =
   `Alabama,Alaska,American Samoa,Arizona,Arkansas,California,ColoradoConnecticut,Delaware,District of Columbia,Florida,Georgia,Guam,Hawaii,Idaho,Illinois,Indiana,Iowa,Kansas,Kentucky,Louisiana,Maine,Maryland,Massachusetts,Michigan,Minnesota,Mississippi,Missouri,Montana,Nebraska,Nevada,New Hampshire,New Jersey,New Mexico,New York,North Carolina,North Dakota,Northern Marianas Islands,Ohio,Oklahoma,Oregon,Pennsylvania,Puerto Rico,Rhode Island,South Carolina,South Dakota,Tennessee,Texas,Utah,Vermont,Virginia,Virgin Islands,Washington,West Virginia,Wisconsin,Wyoming`
@@ -9,6 +8,7 @@ const states =
 
 describe("combo-box", () => {
   let rootNode: HTMLElement
+  let controller: ReturnType<typeof mountComboBox>
 
   beforeEach(() => {
     rootNode = document.createElement("root-node")
@@ -16,7 +16,9 @@ describe("combo-box", () => {
   })
 
   afterEach(() => {
+    controller?.destroy()
     document.body.removeChild(rootNode)
+    vi.restoreAllMocks()
   })
 
   function mount(options = states) {
@@ -45,13 +47,7 @@ describe("combo-box", () => {
     </div>`
     const node = rootNode.querySelector<HTMLElement>("[data-combobox]")!
     const optionNodes = [...node.querySelectorAll<HTMLElement>('[role="option"]')]
-    Mosaic(
-      node,
-      ComboBox({
-        rootNode: node,
-        $$: (query) => [...node.querySelectorAll<HTMLElement>(query)],
-      })
-    )
+    controller = mountComboBox(node)
     return optionNodes
   }
 
@@ -85,6 +81,39 @@ describe("combo-box", () => {
     select.input.dispatchEvent(new KeyboardEvent(type, { key, bubbles: true }))
     await nextFrame()
   }
+
+  it("dismisses outside pointer interactions while keeping inside interactions open", async () => {
+    mount(["Alabama", "New York"])
+    await search("a")
+    select.input.dispatchEvent(new PointerEvent("pointerup", { bubbles: true }))
+    await nextFrame()
+    assert.isFalse(select.listbox.hidden)
+    rootNode.dispatchEvent(new PointerEvent("pointerup", { bubbles: true }))
+    assert.isFalse(controller.getState().listboxOpen)
+    await nextFrame()
+    assert.isTrue(select.listbox.hidden)
+    assert.equal(select.input.value, "a")
+  })
+
+  it("removes the outside listener on destruction and supports mounting again", async () => {
+    mount(["Alabama", "New York"])
+    await search("a")
+    const contains = vi.spyOn(select.combobox, "contains")
+    controller.destroy()
+    controller.destroy()
+    rootNode.dispatchEvent(new PointerEvent("pointerup", { bubbles: true }))
+    await nextFrame()
+    assert.equal(contains.mock.calls.length, 0)
+    assert.isTrue(controller.getState().listboxOpen)
+    assert.isFalse(select.listbox.hidden)
+
+    controller = mountComboBox(select.combobox)
+    await search("new")
+    rootNode.dispatchEvent(new PointerEvent("pointerup", { bubbles: true }))
+    await nextFrame()
+    assert.equal(contains.mock.calls.length, 1)
+    assert.isTrue(select.listbox.hidden)
+  })
 
   it(`sets [role="combobox"] on the input`, () => {
     mount()

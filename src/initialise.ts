@@ -1,25 +1,6 @@
 import { write } from "./xo.js"
 import type { StateStore } from "./store.js"
-import type {
-  ActionHandlers,
-  Controller,
-  ElementConfig,
-  MosaicConfig,
-} from "./types.js"
-
-const matchGlobalSelector = (q: string) => q.match(/^:global\(([^)].+)\)$/)?.[1]
-
-type BoundElement<State extends object, Actions> = {
-  select: string
-  scope: "global" | "local"
-  getNodes: () => (Element | null)[]
-} & Pick<ElementConfig<State, Actions>, "attribute" | "sync" | "on">
-
-type RuntimeHandler<State extends object, Actions> = (
-  event: Event,
-  store: Controller<State, Actions>,
-  index: number,
-) => void | Promise<void>
+import type { ActionHandlers, EventContext, MosaicConfig } from "./types.js"
 
 export function initialise<
   State extends object,
@@ -31,125 +12,77 @@ export function initialise<
 ) {
   const { controller } = store
   let state = config.state ?? ({} as State)
-  const elements: BoundElement<State, Actions>[] = (config.elements || []).map((v) => {
-    let select = (v.select || v.selectAll)!
-    const globalSelector = matchGlobalSelector(select)
-    select = globalSelector || select
-    return {
-      ...v,
-      select,
-      getNodes: () => {
-        const contextNode = globalSelector ? document.body : rootNode
-        if (v.select) {
-          return v.select === ":self"
-            ? [rootNode]
-            : [contextNode.querySelector(select)]
-        } else {
-          return [...contextNode.querySelectorAll(select)]
-        }
-      },
-      scope: globalSelector ? "global" : "local",
-    }
-  })
-  const event: Record<
-    string,
-    (BoundElement<State, Actions> & {
-      callback: string | RuntimeHandler<State, Actions>
-    })[]
-  > = {}
+  const elements = (config.elements ?? []).map((binding) => ({
+    ...binding,
+    targets: [...rootNode.querySelectorAll(binding.select)],
+  }))
 
-  // derive initial state from input directives...
-  elements
-    .filter(({ sync }) => sync)
-    .forEach((c) => {
-      const { getNodes } = c
-      const sync = c.sync!
-      const targets = getNodes()
-      targets.forEach((target) => {
-        state = { ...state, [sync]: (target as HTMLInputElement).value }
+  function listen(target: Element, type: string, callback: EventListener) {
+    target.addEventListener(type, callback)
+    store.own(() => target.removeEventListener(type, callback))
+  }
 
-        event["local:input"] = event["local:input"] || []
-        event["local:input"].push({
-          ...c,
-          callback: (event) => {
-            const { target } = event
-            store.patch({
-              [sync]: (target as HTMLInputElement).value,
-            } as Partial<State>)
-          },
-        })
-      })
-    })
-
-  // find event listeners
-  elements
-    .filter(({ on }) => on)
-    .forEach((c) => {
-      const { scope } = c
-      const on = c.on!
-
-      const entries = Object.entries(on) as [
-        string,
-        string | RuntimeHandler<State, Actions>,
-      ][]
-      entries.forEach(([type, callback]) => {
-        const k = `${scope}:${type}`
-        event[k] = event[k] || []
-        event[k].push({
-          ...c,
-          callback,
-        })
-      })
-    })
-
-  // delegate from the root node
-  Object.entries(event).forEach(([k, listeners]) => {
-    const [scope, type] = k.split(":")
-    const contextNode = scope === "global" ? document.body : rootNode
-    contextNode.addEventListener(type, (e) => {
-      listeners
-        .filter(
-          ({ select }) => select === ":self" || (e.target as Element).matches(select)
-        )
-        .forEach(({ callback, getNodes }) => {
-          const { target } = e
-          const targets = getNodes()
-          const index = targets.indexOf(target as Element)
-
-          if (typeof callback === "function") {
-            callback(e, controller, index)
-          }
-          if (typeof callback === "string") {
-            // Legacy string handlers receive a DOM index; reducers define the public payload type.
-            const dispatch = controller.dispatch as unknown as (
-              name: string,
-              index: number,
-            ) => Promise<void>
-            dispatch(callback, index)
-          }
-        })
-    })
-  })
-
-  const onChange = (state: State) => {
-    elements.forEach((c) => {
-      const { attribute, sync, getNodes } = c
-
-      const targets = getNodes()
-
-      targets.forEach((target, i) => {
-        if (attribute) {
-          write(target!, attribute(state, i))
-        }
-        if (sync) {
-          const value = state[sync]
-
-          const input = target as HTMLInputElement
-          if (input.value !== value) input.value = value as string
-        }
-      })
+  function complete(result: void | Promise<void>) {
+    if (!result) return
+    void result.catch((error: unknown) => {
+      if (store.isDestroyed() && error instanceof DOMException && error.name === "AbortError") return
+      reportError(error)
     })
   }
 
-  store.initialise(state, onChange)
+  // Register sync first so consumer input handlers see the current state.
+  for (const binding of elements) {
+    const { sync } = binding
+    if (!sync) continue
+    for (const target of binding.targets) {
+      const input = target as HTMLInputElement
+      state = { ...state, [sync]: input.value }
+      listen(target, "input", () => {
+        store.patch({ [sync]: input.value } as Partial<State>)
+      })
+    }
+  }
+
+  for (const binding of elements) {
+    binding.targets.forEach((element, index) => {
+      for (const [type, callback] of Object.entries(binding.on ?? {})) {
+        if (!callback) continue
+        listen(element, type, (event) => {
+          if (store.isDestroyed()) return
+          const context: EventContext<State, Actions> = {
+            state: controller.getState(), element, index, event,
+            dispatch: controller.dispatch, getState: controller.getState,
+          }
+          if (typeof callback === "string") {
+            const dispatch = controller.dispatch as unknown as (
+              name: string, payload: EventContext<State, Actions>,
+            ) => Promise<void>
+            complete(dispatch(callback, context))
+          } else {
+            // Each event name retains its specific event type in the public configuration.
+            const handler = callback as (context: EventContext<State, Actions>) => void | Promise<void>
+            complete(handler(context))
+          }
+        })
+      }
+    })
+  }
+
+  store.initialise(state, (state) => {
+    for (const { targets, attribute, sync } of elements) {
+      for (const [index, target] of targets.entries()) {
+        if (store.isDestroyed()) return
+        if (attribute) {
+          const attributes = attribute({ state, element: target, index })
+          if (store.isDestroyed()) return
+          write(target, attributes)
+        }
+        if (sync) {
+          const input = target as HTMLInputElement
+          const value = state[sync] as string
+          if (input.value !== value) input.value = value
+        }
+      }
+    }
+  })
 }

@@ -50,41 +50,41 @@ export const Tabs = ({ $$ }: Pick<ExampleContext, "$$">) => {
     elements: [
       {
         select: TABS,
-        attribute: (state, i) => ({
+        attribute: ({ state, index: i }) => ({
           ariaSelected: i === state.selectedTab,
           tabIndex: i === state.selectedTab ? null : -1,
         }),
         on: {
-          keydown: (event, store) => {
+          keydown: ({ event, dispatch }) => {
             switch (event.key) {
               case "ArrowLeft":
-                store.dispatch("selectPreviousTab")
+                dispatch("selectPreviousTab")
                 break
 
               case "ArrowRight":
-                store.dispatch("selectNextTab")
+                dispatch("selectNextTab")
                 break
 
               case "Home":
-                store.dispatch("selectFirstTab")
+                dispatch("selectFirstTab")
                 break
 
               case "End":
-                store.dispatch("selectLastTab")
+                dispatch("selectLastTab")
                 break
 
               default:
                 break
             }
           },
-          click: (_, store, i) => {
-            store.dispatch("selectTab", i)
+          click: ({ dispatch, index: i }) => {
+            dispatch("selectTab", i)
           },
         },
       },
       {
         select: `[role="tabpanel"]`,
-        attribute: (state, i) => ({
+        attribute: ({ state, index: i }) => ({
           hidden: i !== state.selectedTab,
         }),
       },

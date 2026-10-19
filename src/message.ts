@@ -1,6 +1,7 @@
 export const Message = <Args extends unknown[]>() => {
   const subscribers = new Set<{ callback: (...args: Args) => void }>()
   return {
+    clear() { subscribers.clear() },
     subscribe(callback: (...args: Args) => void): () => void {
       const subscription = { callback }
       subscribers.add(subscription)

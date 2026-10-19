@@ -1,4 +1,4 @@
-import type { Controller, MosaicConfig } from "../../src/index.js"
+import { Mosaic, type Controller, type MosaicConfig } from "../../src/index.js"
 import type { ExampleContext } from "../types.js"
 
 interface Option {
@@ -11,7 +11,6 @@ interface ComboboxState {
   selectedOption: number
   listboxOpen: boolean
   filteredOptions: Option[]
-  pointerOver: boolean
 }
 
 let counter = 0
@@ -33,8 +32,6 @@ export const ComboBox = ({ rootNode, $$ }: ExampleContext) => {
   }
 
   const actions = {
-    pointerOver: (state: ComboboxState) => ({ ...state, pointerOver: true }),
-    pointerOut: (state: ComboboxState) => ({ ...state, pointerOver: false }),
     replaceSearchTextWithSelectedOption: (state: ComboboxState) => {
       const { selectedOption, filteredOptions, searchText } = state
 
@@ -109,36 +106,16 @@ export const ComboBox = ({ rootNode, $$ }: ExampleContext) => {
       selectedOption: -1,
       listboxOpen: false,
       filteredOptions: options,
-      pointerOver: false,
     },
     actions,
     elements: [
       {
-        select: ":global(body)",
-        on: {
-          pointerup: (e, { getState, dispatch }) => {
-            if (rootNode.contains(e.target as Node)) return
-            setTimeout(() => {
-              const { pointerOver } = getState()
-              if (pointerOver === false) dispatch("closeListbox")
-            }, 300)
-          },
-        },
-      },
-      {
-        select: ":self",
-        on: {
-          pointerover: "pointerOver",
-          pointerout: "pointerOut",
-        },
-      },
-      {
-        select: `input[type=text]`,
-        attribute: ({
+        select: "input[type=text]",
+        attribute: ({ state: {
           filteredOptions = [],
           selectedOption,
           listboxOpen,
-        }) => ({
+        } }) => ({
           ariaAutocomplete: "list",
           ariaExpanded: listboxOpen,
           ariaControls: listBoxId,
@@ -149,49 +126,49 @@ export const ComboBox = ({ rootNode, $$ }: ExampleContext) => {
         }),
         sync: "searchText",
         on: {
-          input: (_, store) => {
-            store.dispatch("onSearchInput")
+          input: ({ dispatch }) => {
+            dispatch("onSearchInput")
           },
-          keydown: (event, store) => {
+          keydown: ({ event, dispatch }) => {
             const { key } = event
 
             switch (key) {
               case "Tab": {
-                store.dispatch("replaceSearchTextWithSelectedOption")
+                dispatch("replaceSearchTextWithSelectedOption")
                 break
               }
             }
           },
-          keyup: async (event, store) => {
+          keyup: async ({ event, dispatch, getState }) => {
             const { key } = event
 
             switch (key) {
               case "Enter": {
-                store.dispatch("replaceSearchTextWithSelectedOption")
+                dispatch("replaceSearchTextWithSelectedOption")
                 break
               }
               case "Down":
               case "ArrowDown": {
-                store.dispatch("openListbox")
-                await store.dispatch("selectNextOption")
-                scrollToSelectedOption(store)
+                dispatch("openListbox")
+                await dispatch("selectNextOption")
+                scrollToSelectedOption({ getState })
                 break
               }
               case "Up":
               case "ArrowUp": {
-                store.dispatch("openListbox")
-                await store.dispatch("selectPreviousOption")
-                scrollToSelectedOption(store)
+                dispatch("openListbox")
+                await dispatch("selectPreviousOption")
+                scrollToSelectedOption({ getState })
                 break
               }
               case "Esc":
               case "Escape": {
-                const { listboxOpen } = store.getState()
+                const { listboxOpen } = getState()
 
                 if (listboxOpen) {
-                  store.dispatch("closeListbox")
+                  dispatch("closeListbox")
                 } else {
-                  store.dispatch("clearSearchInput")
+                  dispatch("clearSearchInput")
                 }
                 break
               }
@@ -200,25 +177,25 @@ export const ComboBox = ({ rootNode, $$ }: ExampleContext) => {
         },
       },
       {
-        select: `[role=listbox]`,
-        attribute: (state) => ({
+        select: "[role=listbox]",
+        attribute: ({ state }) => ({
           id: listBoxId,
           hidden: !state.listboxOpen,
         }),
       },
       {
-        selectAll: "[role=option]",
-        attribute: ({ filteredOptions, selectedOption, listboxOpen }, i) => ({
+        select: "[role=option]",
+        attribute: ({ state: { filteredOptions, selectedOption, listboxOpen }, index: i }) => ({
           id: options[i].id,
           hidden: !filteredOptions.includes(options[i]),
           ariaSelected:
             listboxOpen && filteredOptions[selectedOption] === options[i],
         }),
         on: {
-          pointerdown: (event) => event.preventDefault(),
-          click: (_, store, i) => {
-            store.dispatch("selectOption", i)
-            store.dispatch("replaceSearchTextWithSelectedOption")
+          pointerdown: ({ event }) => event.preventDefault(),
+          click: ({ dispatch, index: i }) => {
+            dispatch("selectOption", i)
+            dispatch("replaceSearchTextWithSelectedOption")
             rootNode.querySelector<HTMLInputElement>('input[type="text"]')!.focus()
           },
         },
@@ -226,4 +203,27 @@ export const ComboBox = ({ rootNode, $$ }: ExampleContext) => {
     ],
   }
   return config
+}
+
+export function mountComboBox(rootNode: HTMLElement) {
+  const controller = Mosaic(rootNode, ComboBox({
+    rootNode,
+    $$: (query) => [...rootNode.querySelectorAll<HTMLElement>(query)],
+  }))
+  const onPointerUp = (event: PointerEvent) => {
+    if (rootNode.contains(event.target as Node)) return
+    void controller.dispatch("closeListbox").catch((error: unknown) => {
+      if (error instanceof DOMException && error.name === "AbortError") return
+      reportError(error)
+    })
+  }
+  const ownerDocument = rootNode.ownerDocument
+  ownerDocument.addEventListener("pointerup", onPointerUp)
+  return {
+    ...controller,
+    destroy() {
+      ownerDocument.removeEventListener("pointerup", onPointerUp)
+      controller.destroy()
+    },
+  }
 }

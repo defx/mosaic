@@ -59,7 +59,7 @@ describe("navigation menu enhancement", () => {
         },
         {
           select: "nav",
-          attribute: ({ menuIsOpen }) => {
+          attribute: ({ state: { menuIsOpen } }) => {
             return {
               class: {
                 hamburger: true,
