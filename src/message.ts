@@ -1,14 +1,23 @@
-export const Message = <Args extends unknown[]>(callbacks: {
-  postPublish?: () => void
-}) => {
-  const subscribers: ((...args: Args) => void)[] = []
+export const Message = <Args extends unknown[]>() => {
+  const subscribers = new Set<{ callback: (...args: Args) => void }>()
   return {
-    subscribe(fn: (...args: Args) => void) {
-      subscribers.push(fn)
+    subscribe(callback: (...args: Args) => void): () => void {
+      const subscription = { callback }
+      subscribers.add(subscription)
+      return () => { subscribers.delete(subscription) }
     },
-    publish(...args: Args) {
-      subscribers.forEach((fn) => fn(...args))
-      callbacks.postPublish?.()
+    publish(...args: Args): unknown[] {
+      const errors: unknown[] = []
+      // New subscriptions start with the next publication; removals take effect immediately.
+      for (const subscription of [...subscribers]) {
+        if (!subscribers.has(subscription)) continue
+        try {
+          subscription.callback(...args)
+        } catch (error) {
+          errors.push(error)
+        }
+      }
+      return errors
     },
   }
 }

@@ -1,4 +1,5 @@
 import { write } from "./xo.js"
+import type { StateStore } from "./store.js"
 import type {
   ActionHandlers,
   Controller,
@@ -26,8 +27,9 @@ export function initialise<
 >(
   rootNode: Element,
   config: MosaicConfig<State, Actions>,
-  store: Controller<State, Actions>,
+  store: StateStore<State, Actions>,
 ) {
+  const { controller } = store
   let state = config.state ?? ({} as State)
   const elements: BoundElement<State, Actions>[] = (config.elements || []).map((v) => {
     let select = (v.select || v.selectAll)!
@@ -71,7 +73,7 @@ export function initialise<
           ...c,
           callback: (event) => {
             const { target } = event
-            store.merge({
+            store.patch({
               [sync]: (target as HTMLInputElement).value,
             } as Partial<State>)
           },
@@ -115,11 +117,11 @@ export function initialise<
           const index = targets.indexOf(target as Element)
 
           if (typeof callback === "function") {
-            callback(e, store, index)
+            callback(e, controller, index)
           }
           if (typeof callback === "string") {
             // Legacy string handlers receive a DOM index; reducers define the public payload type.
-            const dispatch = store.dispatch as unknown as (
+            const dispatch = controller.dispatch as unknown as (
               name: string,
               index: number,
             ) => Promise<void>
@@ -149,6 +151,5 @@ export function initialise<
     })
   }
 
-  store.subscribe(onChange)
-  store.set(state)
+  store.initialise(state, onChange)
 }

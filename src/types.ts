@@ -18,9 +18,7 @@ export type Dispatch<Actions> = <Name extends keyof Actions & string>(
 export interface Controller<State extends object, Actions = {}> {
   dispatch: Dispatch<Actions>
   getState(): State
-  merge(state: Partial<State>): void
-  set(state: State): void
-  subscribe(callback: (state: State) => void): void
+  subscribe(callback: (state: State) => void): () => void
 }
 
 export type Attributes = Record<string, unknown>

@@ -32,10 +32,12 @@ controller.dispatch("rename", "Updated")
 controller.dispatch("reset")
 const count: number = controller.getState().count
 const label: string = controller.getState().label
-controller.subscribe((state) => {
+const unsubscribe = controller.subscribe((state) => {
   const value: number = state.count
   void value
 })
+unsubscribe()
+unsubscribe()
 
 // @ts-expect-error Action names are restricted to declared reducers.
 controller.dispatch("missing")
@@ -48,7 +50,11 @@ controller.dispatch("reset", 2)
 // @ts-expect-error State keys are known.
 controller.getState().missing
 // @ts-expect-error State value types are preserved.
-controller.merge({ count: "wrong" })
+controller.getState().count = "wrong"
+// @ts-expect-error State replacement is not a public controller operation.
+controller.set({ count: 1, label: "" })
+// @ts-expect-error State merging is not a public controller operation.
+controller.merge({ count: 1 })
 
 void count
 void label

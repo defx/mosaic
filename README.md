@@ -67,10 +67,40 @@ Bind the configuration to an existing DOM node:
 import { Mosaic } from "mosaic";
 
 const rootNode = document.querySelector("[data-accordion]");
-const store = Mosaic(rootNode, Accordion());
+const controller = Mosaic(rootNode, Accordion());
 ```
 
-Mosaic enhances the supplied node and returns its state store.
+Mosaic enhances the supplied node and returns a controller with `dispatch`,
+`getState`, and `subscribe`. Dispatch actions to update state.
+
+```js
+const unsubscribe = controller.subscribe((state) => {
+  console.log(state.openPanel);
+});
+
+await controller.dispatch("togglePanel", 1);
+// The DOM now reflects the completed batch.
+unsubscribe();
+```
+
+Reducers update state synchronously, so `getState()` immediately returns the latest
+state. Rendering and subscriber notifications are batched into the next animation
+frame. Several actions before that frame share one render of their final state.
+`dispatch` resolves after rendering and synchronous subscriber notifications finish;
+it does not wait for browser paint. An action dispatched during publication updates
+state immediately and renders in a later frame, with its own completion promise.
+
+`getState()` returns a shallow snapshot. Update nested objects and arrays immutably.
+Subscriptions begin with the next publication, after rendering, and return an
+idempotent unsubscribe function. Asynchronous subscriber work is not awaited.
+
+Unknown actions and reducer errors reject the dispatch promise. A render or
+subscriber error rejects every dispatch promise in that batch; remaining
+subscribers still run and later updates can recover. Multiple publication errors
+are combined in an `AggregateError`. Committed state is retained after publication
+errors, and failed rendering may leave the DOM partially updated. Errors from
+`sync`-only batches, which have no dispatch promise, are reported through the
+browser's `reportError` function.
 
 ## Install
 
@@ -104,9 +134,7 @@ Tests run in headless Chromium through Vitest Browser Mode and Playwright.
 - `npm run dev` serves the examples through Vite at [localhost:1983/examples/](http://localhost:1983/examples/).
 - `npm run build` type-checks, emits JavaScript and declarations, and builds the bundles. Package declarations are generated in `dist/types`.
 
-The current API is still `Mosaic(node, config)`, with selector bindings and
-positional callbacks. TypeScript infers state and action names; annotate reducer
+TypeScript infers state and action names; annotate reducer
 payloads such as `(state, amount: number) => ...`. Action-name event shorthand
-currently passes a numeric DOM index; use a callback to supply a different payload.
-The planned API changes will be introduced in subsequent chunks.
+passes a numeric DOM index; use a callback to supply a different payload.
 

@@ -27,7 +27,7 @@ export const Mosaic = <
 
   initialise(node, config, store)
 
-  return store
+  return store.controller
 }
 
 export const $ = Mosaic
