@@ -1,17 +1,25 @@
+import type { MosaicConfig } from "../../src/index.js"
+
+interface AccordionState {
+  openPanel: number
+}
+
 let counter = 0
 
 export const Accordion = () => {
   const id = counter++
-  return {
+  const actions = {
+    togglePanel: (state: AccordionState, i: number) => ({
+      ...state,
+      openPanel: state.openPanel === i ? -1 : i,
+    }),
+  }
+
+  const config: MosaicConfig<AccordionState, typeof actions> = {
     state: {
       openPanel: 0,
     },
-    actions: {
-      togglePanel: (state, i) => ({
-        ...state,
-        openPanel: state.openPanel === i ? -1 : i,
-      }),
-    },
+    actions,
     elements: [
       {
         select: "button[accordion-toggle]",
@@ -35,4 +43,5 @@ export const Accordion = () => {
       },
     ],
   }
+  return config
 }

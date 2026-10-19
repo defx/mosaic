@@ -3,7 +3,7 @@ import { Mosaic } from "../src/index.js"
 import { html, nextFrame } from "./helpers/browser.js"
 
 describe("attribution", () => {
-  let rootNode
+  let rootNode: HTMLElement
 
   beforeEach(() => {
     rootNode = document.createElement("root-node")
@@ -29,9 +29,9 @@ describe("attribution", () => {
       ],
     })
 
-    assert.equal(rootNode.querySelector(`button`).hidden, false)
+    assert.equal(rootNode.querySelector(`button`)!.hidden, false)
     assert.equal(
-      rootNode.querySelector(`button`).getAttribute("aria-expanded"),
+      rootNode.querySelector(`button`)!.getAttribute("aria-expanded"),
       "false"
     )
   })
@@ -62,12 +62,12 @@ describe("attribution", () => {
       ],
     })
 
-    rootNode.querySelector(`button`).click()
+    rootNode.querySelector(`button`)!.click()
 
     await nextFrame()
 
     assert.equal(
-      rootNode.querySelector(`button`).getAttribute("aria-expanded"),
+      rootNode.querySelector(`button`)!.getAttribute("aria-expanded"),
       "true"
     )
   })

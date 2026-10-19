@@ -3,7 +3,7 @@ import { Mosaic } from "../src/index.js"
 import { html, nextFrame } from "./helpers/browser.js"
 
 describe("navigation menu enhancement", () => {
-  let rootNode
+  let rootNode: HTMLElement
 
   beforeEach(() => {
     rootNode = document.createElement("root-node")
@@ -71,13 +71,13 @@ describe("navigation menu enhancement", () => {
       ],
     })
 
-    assert.ok(rootNode.querySelector("nav").classList.contains("hamburger"))
-    assert.notOk(rootNode.querySelector("nav").classList.contains("open"))
+    assert.ok(rootNode.querySelector("nav")!.classList.contains("hamburger"))
+    assert.notOk(rootNode.querySelector("nav")!.classList.contains("open"))
 
-    rootNode.querySelector(`button`).click()
+    rootNode.querySelector(`button`)!.click()
 
     await nextFrame()
 
-    assert.ok(rootNode.querySelector("nav").classList.contains("open"))
+    assert.ok(rootNode.querySelector("nav")!.classList.contains("open"))
   })
 })

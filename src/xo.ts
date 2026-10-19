@@ -1,18 +1,19 @@
 import { isPrimitive } from "./helpers.js"
+import type { Attributes } from "./types.js"
 
-const pascalToKebab = (string) =>
+const pascalToKebab = (string: string) =>
   string.replace(/[\w]([A-Z])/g, function (m) {
     return m[0] + "-" + m[1].toLowerCase()
   })
 
-const kebabToPascal = (string) =>
+const kebabToPascal = (string: string) =>
   string.replace(/[\w]-([\w])/g, function (m) {
     return m[0] + m[2].toUpperCase()
   })
 
-export const objectToClasses = (v = {}) => {
+export const objectToClasses = (v: Record<string, unknown> = {}) => {
   return Object.entries(v)
-    .reduce((c, [k, v]) => {
+    .reduce<string[]>((c, [k, v]) => {
       if (v) c.push(k)
       return c
     }, [])
@@ -23,23 +24,18 @@ export const objectFromClasses = (v = "") => {
   return v
     .split(/\s+/)
     .filter((v) => v)
-    .reduce((o, k) => {
+    .reduce<Record<string, boolean>>((o, k) => {
       o[k] = true
       return o
     }, {})
 }
 
-export const write = (node, attrs) => {
+export const write = (node: Element, attrs: Attributes | null | undefined) => {
   for (let [k, v] of Object.entries(attrs || {})) {
     k = pascalToKebab(k)
 
-    if (k === "textContent" && node.textContent !== textContent) {
-      node.textContent = textContent
-      continue
-    }
-
     if (k === "class") {
-      v = objectToClasses(v)
+      v = objectToClasses(v as Record<string, unknown>)
     }
 
     if (typeof v === "boolean") {
@@ -51,7 +47,7 @@ export const write = (node, attrs) => {
     }
 
     if (isPrimitive(v) === false) {
-      node[kebabToPascal(k)] = v
+      ;(node as unknown as Record<string, unknown>)[kebabToPascal(k)] = v
       continue
     }
 
@@ -60,7 +56,7 @@ export const write = (node, attrs) => {
     if (v === current) continue
 
     if (typeof v === "string" || typeof v === "number") {
-      node.setAttribute(k, v)
+      node.setAttribute(k, String(v))
     } else {
       node.removeAttribute(k)
     }

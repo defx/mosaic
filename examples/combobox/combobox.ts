@@ -1,22 +1,109 @@
+import type { Controller, MosaicConfig } from "../../src/index.js"
+import type { ExampleContext } from "../types.js"
+
+interface Option {
+  id: string
+  value: string
+}
+
+interface ComboboxState {
+  searchText: string
+  selectedOption: number
+  listboxOpen: boolean
+  filteredOptions: Option[]
+  pointerOver: boolean
+}
+
 let counter = 0
 
-export const ComboBox = ({ rootNode, $$ }) => {
+export const ComboBox = ({ rootNode, $$ }: ExampleContext) => {
   const id = counter++
   const listBoxId = `listbox_${id}`
   const options = $$('[role="option"]').map((node, i) => ({
     id: node.id || `option_${id}_${i}`,
     value: node.textContent.trim(),
   }))
-  const filterOptions = (searchText) =>
+  const filterOptions = (searchText: string) =>
     options.filter(({ value }) =>
       value.toLowerCase().startsWith(searchText.toLowerCase())
     )
-  const scrollToSelectedOption = ({ getState }) => {
+  const scrollToSelectedOption = ({ getState }: Pick<Controller<ComboboxState>, "getState">) => {
     const { selectedOption } = getState()
     $$('[role="option"]:not([hidden])')[selectedOption]?.scrollIntoView()
   }
 
-  return {
+  const actions = {
+    pointerOver: (state: ComboboxState) => ({ ...state, pointerOver: true }),
+    pointerOut: (state: ComboboxState) => ({ ...state, pointerOver: false }),
+    replaceSearchTextWithSelectedOption: (state: ComboboxState) => {
+      const { selectedOption, filteredOptions, searchText } = state
+
+      const value = filteredOptions[selectedOption]?.value ?? searchText
+
+      return {
+        ...state,
+        selectedOption: -1,
+        searchText: value,
+        filteredOptions: filterOptions(value),
+        listboxOpen: false,
+      }
+    },
+    clearSearchInput: (state: ComboboxState) => ({
+      ...state,
+      searchText: "",
+      selectedOption: -1,
+      filteredOptions: options,
+      listboxOpen: false,
+    }),
+    openListbox: (state: ComboboxState) => ({
+      ...state,
+      listboxOpen: true,
+    }),
+    closeListbox: (state: ComboboxState) => ({
+      ...state,
+      listboxOpen: false,
+      selectedOption: -1,
+    }),
+    selectOption: (state: ComboboxState, i: number) => ({
+      ...state,
+      selectedOption: state.filteredOptions.indexOf(options[i]),
+    }),
+    selectNextOption: (state: ComboboxState) => {
+      const { filteredOptions, selectedOption } = state
+      return {
+        ...state,
+        selectedOption:
+          filteredOptions.length === 0
+            ? -1
+            : selectedOption < filteredOptions.length - 1
+              ? selectedOption + 1
+              : 0,
+      }
+    },
+    selectPreviousOption: (state: ComboboxState) => {
+      const { filteredOptions, selectedOption } = state
+      return {
+        ...state,
+        selectedOption:
+          filteredOptions.length === 0
+            ? -1
+            : selectedOption > 0
+              ? selectedOption - 1
+              : filteredOptions.length - 1,
+      }
+    },
+    clearSelectedOption: (state: ComboboxState) => ({ ...state, selectedOption: -1 }),
+    onSearchInput: (state: ComboboxState) => {
+      return {
+        ...state,
+        selectedOption: -1,
+        listboxOpen: true,
+        filteredOptions: filterOptions(state.searchText),
+      }
+    },
+  }
+
+  const config: MosaicConfig<ComboboxState, typeof actions> = {
     state: {
       searchText: "",
       selectedOption: -1,
@@ -24,82 +111,13 @@ export const ComboBox = ({ rootNode, $$ }) => {
       filteredOptions: options,
       pointerOver: false,
     },
-    actions: {
-      pointerOver: (state) => ({ ...state, pointerOver: true }),
-      pointerOut: (state) => ({ ...state, pointerOver: false }),
-      replaceSearchTextWithSelectedOption: (state) => {
-        const { selectedOption, filteredOptions, searchText } = state
-
-        const value = filteredOptions[selectedOption]?.value ?? searchText
-
-        return {
-          ...state,
-          selectedOption: -1,
-          searchText: value,
-          filteredOptions: filterOptions(value),
-          listboxOpen: false,
-        }
-      },
-      clearSearchInput: (state) => ({
-        ...state,
-        searchText: "",
-        selectedOption: -1,
-        filteredOptions: options,
-        listboxOpen: false,
-      }),
-      openListbox: (state) => ({
-        ...state,
-        listboxOpen: true,
-      }),
-      closeListbox: (state) => ({
-        ...state,
-        listboxOpen: false,
-        selectedOption: -1,
-      }),
-      selectOption: (state, i) => ({
-        ...state,
-        selectedOption: state.filteredOptions.indexOf(options[i]),
-      }),
-      selectNextOption: (state) => {
-        const { filteredOptions, selectedOption } = state
-        return {
-          ...state,
-          selectedOption:
-            filteredOptions.length === 0
-              ? -1
-              : selectedOption < filteredOptions.length - 1
-                ? selectedOption + 1
-                : 0,
-        }
-      },
-      selectPreviousOption: (state) => {
-        const { filteredOptions, selectedOption } = state
-        return {
-          ...state,
-          selectedOption:
-            filteredOptions.length === 0
-              ? -1
-              : selectedOption > 0
-                ? selectedOption - 1
-                : filteredOptions.length - 1,
-        }
-      },
-      clearSelectedOption: (state) => ({ ...state, selectedOption: -1 }),
-      onSearchInput: (state) => {
-        return {
-          ...state,
-          selectedOption: -1,
-          listboxOpen: true,
-          filteredOptions: filterOptions(state.searchText),
-        }
-      },
-    },
+    actions,
     elements: [
       {
         select: ":global(body)",
         on: {
           pointerup: (e, { getState, dispatch }) => {
-            if (rootNode.contains(e.target)) return
+            if (rootNode.contains(e.target as Node)) return
             setTimeout(() => {
               const { pointerOver } = getState()
               if (pointerOver === false) dispatch("closeListbox")
@@ -201,10 +219,11 @@ export const ComboBox = ({ rootNode, $$ }) => {
           click: (_, store, i) => {
             store.dispatch("selectOption", i)
             store.dispatch("replaceSearchTextWithSelectedOption")
-            rootNode.querySelector('input[type="text"]').focus()
+            rootNode.querySelector<HTMLInputElement>('input[type="text"]')!.focus()
           },
         },
       },
     ],
   }
+  return config
 }

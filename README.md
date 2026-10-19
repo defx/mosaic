@@ -100,5 +100,13 @@ Tests run in headless Chromium through Vitest Browser Mode and Playwright.
 
 - `npm run test:watch` reruns tests as files change. Add `-- --browser.headless=false` to see the browser.
 - `npm run test:coverage` prints source coverage and writes the HTML report to `coverage/index.html`.
-- `node serveExamples.js` serves the examples at [localhost:1983](http://localhost:1983).
+- `npm run typecheck` checks the library, examples, tests, and compile-only API contracts with strict TypeScript settings.
+- `npm run dev` serves the examples through Vite at [localhost:1983/examples/](http://localhost:1983/examples/).
+- `npm run build` type-checks, emits JavaScript and declarations, and builds the bundles. Package declarations are generated in `dist/types`.
+
+The current API is still `Mosaic(node, config)`, with selector bindings and
+positional callbacks. TypeScript infers state and action names; annotate reducer
+payloads such as `(state, amount: number) => ...`. Action-name event shorthand
+currently passes a numeric DOM index; use a callback to supply a different payload.
+The planned API changes will be introduced in subsequent chunks.
 

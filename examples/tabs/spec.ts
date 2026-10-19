@@ -3,7 +3,7 @@ import { Mosaic } from "../../src/index.js"
 import { Tabs } from "./tabs.js"
 
 describe("tabs", () => {
-  let rootNode
+  let rootNode: HTMLElement
 
   beforeEach(() => {
     rootNode = document.createElement("root-node")
@@ -82,13 +82,13 @@ describe("tabs", () => {
         </p>
     </div>
     </div>`
-    const node = rootNode.querySelector("[data-tabs]")
-    Mosaic(node, Tabs({ $$: (query) => [...node.querySelectorAll(query)] }))
+    const node = rootNode.querySelector("[data-tabs]")!
+    return Mosaic(node, Tabs({ $$: (query) => [...node.querySelectorAll<HTMLElement>(query)] }))
   }
 
   const select = {
     get tabs() {
-      return rootNode.querySelector("[data-tabs]")
+      return rootNode.querySelector("[data-tabs]")!
     },
   }
 
@@ -96,5 +96,15 @@ describe("tabs", () => {
   it("placeholder: mounts tabs; interaction coverage follows in chunk 7", () => {
     mount()
     assert.equal(1, 1)
+  })
+
+  it("wraps tab navigation using the configured tab count", async () => {
+    const store = mount()
+    await store.dispatch("selectPreviousTab")
+    assert.equal(store.getState().selectedTab, 3)
+    await store.dispatch("selectNextTab")
+    assert.equal(store.getState().selectedTab, 0)
+    await store.dispatch("selectLastTab")
+    assert.equal(store.getState().selectedTab, 3)
   })
 })

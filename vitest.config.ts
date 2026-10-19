@@ -3,7 +3,7 @@ import { defineConfig } from "vitest/config"
 
 export default defineConfig({
   test: {
-    include: ["test/*.js", "examples/**/spec.js"],
+    include: ["test/*.ts", "examples/**/spec.ts"],
     browser: {
       enabled: true,
       headless: true,
@@ -12,7 +12,7 @@ export default defineConfig({
     },
     coverage: {
       provider: "v8",
-      include: ["src/**/*.js"],
+      include: ["src/**/*.ts"],
       reporter: ["text", "html", "json-summary"],
     },
   },

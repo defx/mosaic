@@ -2,14 +2,14 @@ import { terser } from "rollup-plugin-terser"
 
 export default [
   {
-    input: "src/index.js",
+    input: "dist/modules/index.js",
     output: {
       file: "dist/mosaic.js",
       format: "es",
     },
   },
   {
-    input: "src/index.js",
+    input: "dist/modules/index.js",
     plugins: [terser()],
     output: {
       file: "dist/mosaic.min.js",
@@ -17,7 +17,7 @@ export default [
     },
   },
   {
-    input: "src/index.js",
+    input: "dist/modules/index.js",
     output: {
       dir: "cjs",
       format: "cjs",

@@ -8,7 +8,7 @@ const states =
     .split(",")
 
 describe("combo-box", () => {
-  let rootNode
+  let rootNode: HTMLElement
 
   beforeEach(() => {
     rootNode = document.createElement("root-node")
@@ -43,13 +43,13 @@ describe("combo-box", () => {
         .map((value) => `<li role="option">${value}</li>`)
         .join("")}</ul>
     </div>`
-    const node = rootNode.querySelector("[data-combobox]")
-    const optionNodes = [...node.querySelectorAll('[role="option"]')]
+    const node = rootNode.querySelector<HTMLElement>("[data-combobox]")!
+    const optionNodes = [...node.querySelectorAll<HTMLElement>('[role="option"]')]
     Mosaic(
       node,
       ComboBox({
         rootNode: node,
-        $$: (query) => [...node.querySelectorAll(query)],
+        $$: (query) => [...node.querySelectorAll<HTMLElement>(query)],
       })
     )
     return optionNodes
@@ -57,31 +57,31 @@ describe("combo-box", () => {
 
   const select = {
     get combobox() {
-      return rootNode.querySelector("[data-combobox]")
+      return rootNode.querySelector<HTMLElement>("[data-combobox]")!
     },
     get input() {
-      return rootNode.querySelector(`input[type=text][role=combobox]`)
+      return rootNode.querySelector<HTMLInputElement>(`input[type=text][role=combobox]`)!
     },
     get listbox() {
-      return rootNode.querySelector(`[role=listbox]`)
+      return rootNode.querySelector<HTMLElement>(`[role=listbox]`)!
     },
     get options() {
       return [
-        ...rootNode.querySelectorAll(`[role=listbox] [role=option]:not([hidden])`),
+        ...rootNode.querySelectorAll<HTMLElement>(`[role=listbox] [role=option]:not([hidden])`),
       ]
     },
     get allOptions() {
-      return [...rootNode.querySelectorAll(`[role=listbox] [role=option]`)]
+      return [...rootNode.querySelectorAll<HTMLElement>(`[role=listbox] [role=option]`)]
     },
   }
 
-  async function search(value) {
+  async function search(value: string) {
     select.input.value = value
     select.input.dispatchEvent(new Event("input", { bubbles: true }))
     await nextFrame()
   }
 
-  async function press(key, type = "keyup") {
+  async function press(key: string, type = "keyup") {
     select.input.dispatchEvent(new KeyboardEvent(type, { key, bubbles: true }))
     await nextFrame()
   }
@@ -115,7 +115,7 @@ describe("combo-box", () => {
     const isLabelled = input.hasAttribute("aria-label")
     const isLabelledBy =
       input.hasAttribute("aria-labelledby") &&
-      document.getElementById(input.getAttribute("aria-labelledby"))
+      document.getElementById(input.getAttribute("aria-labelledby")!)
 
     assert.ok(hasLabel || isLabelled || isLabelledBy)
   })
@@ -445,7 +445,7 @@ describe("combo-box", () => {
   it("preserves every option node and its order throughout filtering and selection", async () => {
     const originalNodes = mount(["Alabama", "New York", "New Jersey", "Ohio"])
     const ids = originalNodes.map((node) => node.id)
-    const mutations = []
+    const mutations: MutationRecord[] = []
     const observer = new MutationObserver((records) => mutations.push(...records))
     observer.observe(select.listbox, { childList: true, subtree: true })
 
@@ -472,17 +472,18 @@ describe("combo-box", () => {
     select.input.focus()
     await search("new")
     const [first, last] = select.options
-    const scrolled = []
+    const scrolled: HTMLElement[] = []
     select.allOptions.forEach((node) => {
       node.scrollIntoView = () => scrolled.push(node)
     })
 
-    for (const [key, expected] of [
+    const steps: [string, HTMLElement][] = [
       ["ArrowDown", first],
       ["ArrowDown", last],
       ["ArrowDown", first],
       ["ArrowUp", last],
-    ]) {
+    ]
+    for (const [key, expected] of steps) {
       await press(key)
       assert.equal(select.input.getAttribute("aria-activedescendant"), expected.id)
       assert.equal(expected.getAttribute("aria-selected"), "true")
