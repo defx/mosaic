@@ -8,6 +8,14 @@
   "unpkg": "dist/mosaic.min.js",
   "module": "dist/mosaic.js",
   "types": "dist/types/index.d.ts",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/defx/mosaic.git"
+  },
+  "homepage": "https://github.com/defx/mosaic#readme",
+  "bugs": {
+    "url": "https://github.com/defx/mosaic/issues"
+  },
   "scripts": {
     "dev": "vite",
     "typecheck": "tsc --noEmit",
