@@ -18,15 +18,14 @@ describe("attribution", () => {
     rootNode.innerHTML = html`<button hidden>[+]</button>`
 
     Mosaic(rootNode, {
-      elements: [
-        {
-          select: "button",
+      elements: {
+        button: {
           attribute: () => ({
             hidden: false,
             "aria-expanded": "false",
           }),
         },
-      ],
+      },
     })
 
     assert.equal(rootNode.querySelector(`button`)!.hidden, false)
@@ -48,9 +47,8 @@ describe("attribution", () => {
           expanded: !state.expanded,
         }),
       },
-      elements: [
-        {
-          select: `button`,
+      elements: {
+        button: {
           attribute: ({ state: { expanded } }) => ({
             hidden: false,
             "aria-expanded": String(expanded),
@@ -59,7 +57,7 @@ describe("attribution", () => {
             click: "toggle",
           },
         },
-      ],
+      },
     })
 
     rootNode.querySelector(`button`)!.click()
@@ -76,14 +74,13 @@ describe("attribution", () => {
     rootNode.innerHTML = html`<button>[+]</button><button>[+]</button
       ><button>[+]</button><button>[+]</button>`
     Mosaic(rootNode, {
-      elements: [
-        {
-          select: "button",
+      elements: {
+        button: {
           attribute: () => ({
             "aria-expanded": "false",
           }),
         },
-      ],
+      },
     })
 
     const buttons = [...rootNode.querySelectorAll(`button`)]

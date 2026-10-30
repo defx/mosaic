@@ -8,9 +8,8 @@ const controller = Mosaic(document.createElement("div"), {
     rename: (state, label: string) => ({ ...state, label }),
     reset: (state) => ({ ...state, count: 0 }),
   },
-  elements: [
-    {
-      select: "input",
+  elements: {
+    input: {
       sync: "label",
       attribute: ({ state }) => ({ title: state.label }),
       on: {
@@ -24,7 +23,7 @@ const controller = Mosaic(document.createElement("div"), {
         },
       },
     },
-  ],
+  },
 })
 
 controller.dispatch("increment", 2)
@@ -64,86 +63,92 @@ controller.destroy()
 Mosaic(document.createElement("div"), {
   state: { count: 0 },
   actions: { increment: (state) => ({ count: state.count + 1 }) },
-  elements: [{
-    select: "button",
-    on: { keydown: ({ event, state, element, index, dispatch, getState }) => {
-      const key: string = event.key
-      const tag: string = element.tagName
-      const count: number = state.count + getState().count + index
-      dispatch("increment")
-      // @ts-expect-error Keyboard events retain their specific type.
-      event.pointerId
-      void [key, count, tag]
-    } },
-  }],
+  elements: {
+    button: {
+      on: { keydown: ({ event, state, element, index, dispatch, getState }) => {
+        const key: string = event.key
+        const tag: string = element.tagName
+        const count: number = state.count + getState().count + index
+        dispatch("increment")
+        // @ts-expect-error Keyboard events retain their specific type.
+        event.pointerId
+        void [key, count, tag]
+      } },
+    },
+  },
 })
 
-Mosaic(document.createElement("div"), { elements: [{
-  // @ts-expect-error Bindings require CSS selector strings.
-  select: document,
-}] })
+Mosaic(document.createElement("div"), {
+  // @ts-expect-error Legacy arrays are not selector-keyed objects.
+  elements: [{ select: "button" }],
+})
 
-Mosaic(document.createElement("div"), { state: { label: "" }, elements: [{
-  select: "input",
-  attribute: ({ state, element, index }) => {
-    const name: string = element.tagName
-    const order: number = index
-    // @ts-expect-error Rendering contexts retain the state shape.
-    state.missing
-    return { title: `${name}:${order}:${state.label}` }
+Mosaic(document.createElement("div"), { elements: { button: {
+  // @ts-expect-error Selectors belong in object keys, not binding-level select properties.
+  select: "button",
+} } })
+
+Mosaic(document.createElement("div"), { state: { label: "" }, elements: {
+  input: {
+    attribute: ({ state, element, index }) => {
+      const name: string = element.tagName
+      const order: number = index
+      // @ts-expect-error Rendering contexts retain the state shape.
+      state.missing
+      return { title: `${name}:${order}:${state.label}` }
+    },
   },
-}] })
+} })
 
 Mosaic(document.createElement("div"), {
   state: { label: "", active: false },
-  elements: [{
-    select: "output",
-    text: ({ state, element, index }) => `${element.tagName}:${index}:${state.label}`,
-    class: ({ state }) => ({ active: state.active }),
-    attribute: () => ({ "aria-expanded": "false", hidden: false, "data-count": 0 }),
-  }],
+  elements: {
+    output: {
+      text: ({ state, element, index }) => `${element.tagName}:${index}:${state.label}`,
+      class: ({ state }) => ({ active: state.active }),
+      attribute: () => ({ "aria-expanded": "false", hidden: false, "data-count": 0 }),
+    },
+  },
 })
 
-Mosaic(document.createElement("div"), { elements: [{
-  select: "input",
+Mosaic(document.createElement("div"), { elements: { input: {
   // @ts-expect-error Attribute values must be primitive values, not DOM properties.
   attribute: () => ({ value: { nested: true } }),
-}] })
-Mosaic(document.createElement("div"), { elements: [{
-  select: "output",
+} } })
+Mosaic(document.createElement("div"), { elements: { output: {
   // @ts-expect-error Text bindings require a primitive text value.
   text: () => ({ label: "invalid" }),
-}] })
-Mosaic(document.createElement("div"), { elements: [{
-  select: "button",
+} } })
+Mosaic(document.createElement("div"), { elements: { button: {
   // @ts-expect-error Class maps use boolean values.
   class: () => ({ active: "yes" }),
-}] })
-Mosaic(document.createElement("div"), { state: { count: 0 }, elements: [{
-  select: "input",
+} } })
+Mosaic(document.createElement("div"), { state: { count: 0 }, elements: { input: {
   // @ts-expect-error Sync requires a string or boolean state key.
   sync: "count",
-}] })
-Mosaic(document.createElement("div"), { elements: [{
-  select: "input",
-  // @ts-expect-error General property bindings are not part of the API.
-  property: () => ({ value: "invalid" }),
-}] })
+} } })
+Mosaic(document.createElement("div"), { elements: {
+  input: {
+    // @ts-expect-error General property bindings are not part of the API.
+    property: () => ({ value: "invalid" }),
+  },
+} })
 
 
 const checkboxController = Mosaic(document.createElement("div"), {
   state: { enabled: false },
   actions: { enable: (state, enabled: boolean) => ({ ...state, enabled }) },
-  elements: [{
-    select: 'input[type="checkbox"]',
-    sync: "enabled",
-    on: { change: ({ state, getState, dispatch }) => {
-      const enabled: boolean = state.enabled && getState().enabled
-      dispatch("enable", enabled)
-      // @ts-expect-error Checkbox action payloads remain boolean.
-      dispatch("enable", "yes")
-    } },
-  }],
+  elements: {
+    'input[type="checkbox"]': {
+      sync: "enabled",
+      on: { change: ({ state, getState, dispatch }) => {
+        const enabled: boolean = state.enabled && getState().enabled
+        dispatch("enable", enabled)
+        // @ts-expect-error Checkbox action payloads remain boolean.
+        dispatch("enable", "yes")
+      } },
+    },
+  },
 })
 const enabled: boolean = checkboxController.getState().enabled
 const syncKeys: SyncKey<{ enabled: boolean; query: string; count: number; data: object; values: string[] }>[] = ["enabled", "query"]
@@ -154,8 +159,24 @@ syncKeys.push("count")
 // @ts-expect-error Array-valued checkbox groups are not supported.
 syncKeys.push("values")
 void enabled
-Mosaic(document.createElement("div"), { state: { data: {} }, elements: [{
-  select: "input",
+Mosaic(document.createElement("div"), { state: { data: {} }, elements: { input: {
   // @ts-expect-error Object-valued state keys cannot be synced.
   sync: "data",
-}] })
+} } })
+
+const selector = "input.search"
+Mosaic(document.createElement("div"), {
+  state: { query: "" },
+  actions: { search: (state, query: string) => ({ ...state, query }) },
+  elements: {
+    [selector]: {
+      sync: "query",
+      text: ({ state }) => state.query,
+      on: { input: ({ dispatch }) => {
+        dispatch("search", "updated")
+        // @ts-expect-error Computed selector keys retain action payload types.
+        dispatch("search", 1)
+      } },
+    },
+  },
+})

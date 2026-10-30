@@ -58,13 +58,13 @@ try {
       const controller = mount(root, {
         state: { value: 'configured', enabled: false },
         actions: { change: (state, value) => ({ ...state, value }), enable: (state, enabled) => ({ ...state, enabled }) },
-        elements: [
-          { select: 'input[type=text]', sync: 'value' },
-          { select: 'input[type=checkbox]', sync: 'enabled' },
-          { select: 'output', text: ({state}) => state.value,
+        elements: {
+        'input[type=text]': { sync: 'value' },
+        'input[type=checkbox]': { sync: 'enabled' },
+        output: { text: ({state}) => state.value,
             attribute: ({state}) => ({'data-value':state.value}),
-            class: ({state}) => ({active:state.value.length > 0}) },
-        ],
+            class: ({state}) => ({active:state.value.length > 0}) }
+        }
       });
       check(output.textContent === 'DOM');
       const checkbox = root.querySelector('input[type=checkbox]');

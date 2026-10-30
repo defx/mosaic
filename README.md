@@ -31,11 +31,11 @@ const controller = Mosaic(root, {
     increment: (state, amount: number) => ({ ...state, count: state.count + amount }),
     reset: (state) => ({ ...state, count: 0 }),
   },
-  elements: [
-    { select: "[data-increment]", on: { click: ({ dispatch }) => dispatch("increment", 1) } },
-    { select: "[data-reset]", on: { click: "reset" } },
-    { select: "output", text: ({ state }) => state.count },
-  ],
+  elements: {
+    "[data-increment]": { on: { click: ({ dispatch }) => dispatch("increment", 1) } },
+    "[data-reset]": { on: { click: "reset" } },
+    output: { text: ({ state }) => state.count },
+  },
 });
 
 await controller.dispatch("increment", 2);
@@ -55,9 +55,14 @@ are optional. Reducers receive `(state, payload)`, run synchronously, and return
 complete next state. State and action payload types are inferred from the config;
 annotate payload parameters in TypeScript.
 
-Each binding's `select` is an ordinary CSS selector. It binds **all matching
+`elements` is an object whose keys are ordinary CSS selectors and whose values
+describe the bindings. It is optional; an empty object is also valid. Each selector binds **all matching
 descendants** of the root, excluding the root itself. Use `:scope > button` for
 direct children. Empty match sets are valid. Invalid CSS selectors throw at mount.
+
+Only own enumerable string keys are processed, in JavaScript `Object.entries()`
+order (declaration order for ordinary CSS selector keys). Computed keys work too:
+`elements: { [selector]: { text: ({ state }) => state.label } }`.
 
 Matches are captured once, in document order. Later insertions, reordering, and
 selector changes do not alter that collection or its indexes. Create the required
@@ -67,6 +72,25 @@ collection needs to change.
 An optional configuration callback, `getState(state)`, transforms the complete
 state at initialization and after each write. It must be synchronous and return
 the complete state. Read current state through the controller's `getState()`.
+
+### Migrating from array bindings
+
+Move each binding's `select` value to an object key and remove `select`:
+
+```ts
+// Before
+elements: [{ select: "output", text: ({ state }) => state.count }]
+
+// After
+elements: { output: { text: ({ state }) => state.count } }
+```
+
+The array format is no longer supported and throws a `TypeError`, including for
+empty arrays. Each selector key has one binding. Consolidate repeated selectors
+into one binding, composing callbacks when necessary. Distinct selectors may still
+match the same element and are processed independently in object-entry order.
+When composing maps with object spread, later entries for the same selector
+replace the entire earlier binding; handlers and rendering callbacks are not merged.
 
 ## Rendering
 
@@ -80,16 +104,17 @@ element and `index` is its position in the captured collection for that binding.
 | `class` | Map of class names to booleans | Toggles only returned class names |
 
 ```ts
-{
-  select: "button",
-  attribute: ({ state }) => ({
-    "aria-expanded": String(state.open),
-    "data-status": state.status,
-    disabled: state.busy,
-    tabindex: 0,
-  }),
-  text: ({ state }) => state.label,
-  class: ({ state }) => ({ active: state.open }),
+elements: {
+  button: {
+    attribute: ({ state }) => ({
+      "aria-expanded": String(state.open),
+      "data-status": state.status,
+      disabled: state.busy,
+      tabindex: 0,
+    }),
+    text: ({ state }) => state.label,
+    class: ({ state }) => ({ active: state.open }),
+  },
 }
 ```
 
@@ -121,7 +146,7 @@ const config = {
   actions: {
     choose: (state: { selected: number }, { index }: { index: number }) => ({ ...state, selected: index }),
   },
-  elements: [{ select: "button", on: { click: "choose" } }],
+  elements: { button: { on: { click: "choose" } } },
 };
 ```
 
@@ -148,10 +173,10 @@ from user input requires no action or event handler:
 ```ts
 const controller = Mosaic(root, {
   state: { query: "", enabled: false },
-  elements: [
-    { select: "input.search", sync: "query" },
-    { select: 'input[type="checkbox"]', sync: "enabled" },
-  ],
+  elements: {
+    "input.search": { sync: "query" },
+    'input[type="checkbox"]': { sync: "enabled" },
+  },
 });
 ```
 
@@ -163,7 +188,7 @@ inputs, and multi-selects cause a mount error.
 
 At mount, the DOM wins over configured state. When controls share a key, the first
 bound control supplies its initial value and the rest mirror it. Binding order
-follows the `elements` array, then document order within each binding. Keys with
+follows the `elements` object's entry order, then document order within each binding. Keys with
 no matching controls retain their configured state. Multiple checkboxes sharing a
 key mirror one boolean; they do not collect an array of selected values. Mixing
 checkbox and string-value controls on the same key causes a mount error.
@@ -177,10 +202,11 @@ Add `on.input` only when you want additional behaviour, such as filtering
 suggestions. The handler sees state that `sync` has already updated:
 
 ```ts
-{
-  select: "input.search",
-  sync: "query",
-  on: { input: ({ dispatch }) => dispatch("filterSuggestions") },
+elements: {
+  "input.search": {
+    sync: "query",
+    on: { input: ({ dispatch }) => dispatch("filterSuggestions") },
+  },
 }
 ```
 

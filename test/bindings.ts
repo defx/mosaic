@@ -21,10 +21,10 @@ afterEach(() => {
 
 it("uses exact attribute names, including case-sensitive SVG names", () => {
   const node = root('<svg></svg><button></button>')
-  track(Mosaic(node, { elements: [
-    { select: "svg", attribute: () => ({ viewBox: "0 0 24 24", "data-kind": "icon" }) },
-    { select: "button", attribute: () => ({ "aria-label": "Open", dataCamel: "literal", tabindex: -1 }) },
-  ] }))
+  track(Mosaic(node, { elements: {
+    svg: { attribute: () => ({ viewBox: "0 0 24 24", "data-kind": "icon" }) },
+    button: { attribute: () => ({ "aria-label": "Open", dataCamel: "literal", tabindex: -1 }) },
+  } }))
   const svg = node.querySelector("svg")!
   const button = node.querySelector("button")!
   assert.equal(svg.getAttribute("viewBox"), "0 0 24 24")
@@ -44,7 +44,7 @@ it("sets strings and numbers, uses true for presence, and removes false or nulli
       "aria-expanded": "false", "data-true": "true", "data-false": "false",
     } as Attributes },
     actions: { replace: (state, attributes: Attributes) => ({ ...state, attributes }) },
-    elements: [{ select: "button", attribute: ({ state }) => state.attributes }],
+    elements: { button: { attribute: ({ state }) => state.attributes } },
   }))
   const button = node.querySelector("button")!
   assert.isFalse(button.hasAttribute("hidden"))
@@ -73,10 +73,10 @@ it("writes text content with contexts and clears nullish results", async () => {
   const controller = track(Mosaic(node, {
     state: { value: "<b>Plain text</b>" as TextValue },
     actions: { change: (state, value: TextValue) => ({ ...state, value }) },
-    elements: [{ select: "output", text: ({ state, element, index }) => {
+    elements: { output: { text: ({ state, element, index }) => {
       contexts.push([element, index])
       return state.value
-    } }],
+    } } },
   }))
   const outputs = [...node.querySelectorAll("output")]
   assert.deepEqual(contexts, outputs.map((element, index) => [element, index]))
@@ -93,10 +93,10 @@ it("toggles only returned class names and preserves unrelated and omitted classe
   const controller = track(Mosaic(node, {
     state: { classes: { active: true, stale: false } as Classes | null | undefined },
     actions: { change: (state, classes: Classes | null | undefined) => ({ ...state, classes }) },
-    elements: [{ select: "section", class: ({ state, element, index }) => {
+    elements: { section: { class: ({ state, element, index }) => {
       assert.equal(element, node.children[index])
       return state.classes
-    } }],
+    } } },
   }))
   const first = node.querySelector("section")!
   assert.equal(first.className, "layout theme active")

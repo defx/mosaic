@@ -53,9 +53,8 @@ export const Tabs = ({ $$ }: Pick<ExampleContext, "$$">) => {
       numTabs: tabs.length,
     },
     actions,
-    elements: [
-      {
-        select: TABS,
+    elements: {
+      [TABS]: {
         attribute: ({ state, index: i }) => ({
           id: tabIds[i],
           "aria-controls": panelIds[i],
@@ -83,15 +82,14 @@ export const Tabs = ({ $$ }: Pick<ExampleContext, "$$">) => {
           },
         },
       },
-      {
-        select: `[role="tabpanel"]`,
+      [`[role="tabpanel"]`]: {
         attribute: ({ state, index: i }) => ({
           id: panelIds[i],
           "aria-labelledby": tabIds[i],
           hidden: i !== state.selectedTab,
         }),
-      },
-    ],
+      }
+    }
   }
   return config
 }

@@ -21,6 +21,100 @@ afterEach(() => {
   vi.restoreAllMocks()
 })
 
+it.each([undefined, {}])("accepts omitted or empty elements: %s", (elements) => {
+  const node = root("<output>Unchanged</output>")
+  const controller = track(Mosaic(node, { state: { count: 0 }, elements }))
+  assert.deepEqual(controller.getState(), { count: 0 })
+  assert.equal(node.querySelector("output")!.textContent, "Unchanged")
+})
+
+it.each([{ elements: [] }, { elements: [{ select: "button" }] }])("rejects legacy elements arrays with a migration message: %j", ({ elements }) => {
+  const node = root("<button></button>")
+  const query = vi.spyOn(node, "querySelectorAll")
+  assert.throws(() => Mosaic(node, {
+    // @ts-expect-error Exercise the legacy JavaScript configuration at runtime.
+    elements,
+  }), TypeError, "elements must be a selector-keyed object, not an array; move each select property to an object key")
+  assert.equal(query.mock.calls.length, 0)
+})
+
+it("rejects invalid selector keys before installing listeners", () => {
+  const node = root("<button></button>")
+  const listen = vi.spyOn(node.querySelector("button")!, "addEventListener")
+  assert.throws(() => Mosaic(node, { elements: {
+    button: { on: { click: () => {} } },
+    "[": {},
+  } }), DOMException)
+  assert.equal(listen.mock.calls.length, 0)
+})
+
+it("ignores inherited selector keys", () => {
+  const node = root("<button>Original</button>")
+  const click = vi.fn()
+  const elements = { button: { text: () => "Own", on: { click } } }
+  Object.setPrototypeOf(elements, { "[": {} })
+  track(Mosaic(node, { elements }))
+  node.querySelector("button")!.click()
+  assert.equal(node.querySelector("button")!.textContent, "Own")
+  assert.equal(click.mock.calls.length, 1)
+})
+
+it("supports computed selector lists with document-order indexes", () => {
+  const node = root('<button>First</button><input type="button" value="Second"><button>Third</button>')
+  const selector = "input, button"
+  const seen: [Element, number][] = []
+  track(Mosaic(node, { elements: {
+    [selector]: {
+      attribute: ({ index }) => ({ "data-index": index }),
+      on: { click: ({ element, index }) => { seen.push([element, index]) } },
+    },
+  } }))
+  const matches = [...node.querySelectorAll<HTMLElement>(selector)]
+  matches.forEach((element, index) => {
+    assert.equal(element.getAttribute("data-index"), String(index))
+    element.click()
+  })
+  assert.deepEqual(seen, matches.map((element, index) => [element, index]))
+})
+
+it("renders overlapping bindings in selector declaration order, not specificity order", async () => {
+  const node = root('<button class="special"></button>')
+  const calls: string[] = []
+  const controller = track(Mosaic(node, {
+    state: { count: 0 },
+    actions: { increment: (state) => ({ count: state.count + 1 }) },
+    elements: {
+      "button.special": { text: ({ state }) => {
+        calls.push("specific")
+        return `specific:${state.count}`
+      } },
+      button: { text: ({ state }) => {
+        calls.push("general")
+        return `general:${state.count}`
+      } },
+    },
+  }))
+  assert.equal(node.querySelector("button")!.textContent, "general:0")
+  await controller.dispatch("increment")
+  assert.equal(node.querySelector("button")!.textContent, "general:1")
+  assert.deepEqual(calls, ["specific", "general", "specific", "general"])
+})
+
+it("replaces rather than merges bindings when selector maps are spread", () => {
+  const node = root("<button></button>")
+  const oldClick = vi.fn()
+  const click = vi.fn()
+  const defaults = { button: { text: () => "Default", on: { click: oldClick } } }
+  track(Mosaic(node, { elements: {
+    ...defaults,
+    button: { on: { click } },
+  } }))
+  node.querySelector("button")!.click()
+  assert.equal(node.querySelector("button")!.textContent, "")
+  assert.equal(oldClick.mock.calls.length, 0)
+  assert.equal(click.mock.calls.length, 1)
+})
+
 it("passes the bound element and captured index for child clicks and action shorthand", async () => {
   const node = root('<button><span>First</span></button><button><span>Second</span></button>')
   const buttons = node.querySelectorAll("button")
@@ -33,14 +127,13 @@ it("passes the bound element and captured index for child clicks and action shor
         return { ...state, selected: context.index }
       },
     },
-    elements: [{
-      select: "button",
+    elements: { button: {
       attribute: ({ state, element, index }) => ({
         "data-selected": String(state.selected === index),
         "data-tag": element.tagName,
       }),
       on: { click: "select" },
-    }],
+    } },
   }))
   buttons[1].querySelector("span")!.click()
   assert.equal(controller.getState().selected, 1)
@@ -61,11 +154,10 @@ it("captures matches and their document order once at mount", async () => {
   const controller = track(Mosaic(node, {
     state: { count: 0 },
     actions: { increment: (state) => ({ count: state.count + 1 }) },
-    elements: [{
-      select: "button",
+    elements: { button: {
       attribute: ({ state, index }) => ({ "data-value": `${index}:${state.count}` }),
       on: { click: ({ index }) => { seen.push(index) } },
-    }],
+    } },
   }))
   const late = document.createElement("button")
   node.prepend(late)
@@ -85,10 +177,10 @@ it("scopes matches to descendants of each mounting root", () => {
   first.querySelectorAll("button").forEach((button) => { button.className = "match" })
   second.querySelector("button")!.className = "match"
   const matched = vi.fn()
-  track(Mosaic(first, { elements: [
-    { select: ".match", attribute: () => ({ "data-bound": "first" }), on: { click: matched } },
-    { select: ":scope > button", attribute: () => ({ "data-direct": "yes" }) },
-  ] }))
+  track(Mosaic(first, { elements: {
+    ".match": { attribute: () => ({ "data-bound": "first" }), on: { click: matched } },
+    ":scope > button": { attribute: () => ({ "data-direct": "yes" }) },
+  } }))
   assert.equal(first.getAttribute("data-bound"), null)
   assert.equal(first.querySelector("button")!.getAttribute("data-bound"), "first")
   assert.equal(first.querySelector("section button")!.getAttribute("data-bound"), "first")
@@ -111,10 +203,10 @@ it("accepts empty matches and retains original selector membership", async () =>
   const controller = track(Mosaic(node, {
     state: { count: 0 },
     actions: { increment: (state) => ({ count: state.count + 1 }) },
-    elements: [
-      { select: ".missing", attribute: emptyRender, on: { click: emptyEvent } },
-      { select: ".bound", attribute: ({ state }) => ({ "data-count": state.count }), on: { click } },
-    ],
+    elements: {
+      ".missing": { attribute: emptyRender, on: { click: emptyEvent } },
+      ".bound": { attribute: ({ state }) => ({ "data-count": state.count }), on: { click } },
+    },
   }))
   original.className = ""
   const late = document.createElement("button")
@@ -134,7 +226,7 @@ it("listens directly to non-bubbling focus events and removes listeners on destr
   const node = root("<input>")
   const input = node.querySelector("input")!
   const focus = vi.fn()
-  const controller = track(Mosaic(node, { elements: [{ select: "input", on: { focus } }] }))
+  const controller = track(Mosaic(node, { elements: { input: { on: { focus } } } }))
   input.focus()
   assert.equal(focus.mock.calls.length, 1)
   assert.strictEqual(focus.mock.calls[0][0].element, input)
@@ -144,16 +236,16 @@ it("listens directly to non-bubbling focus events and removes listeners on destr
   assert.equal(focus.mock.calls.length, 1)
 })
 
-it("allows normal bubbling and duplicate bindings", () => {
+it("allows normal bubbling and overlapping bindings", () => {
   const node = root("<section><button><span>Click</span></button></section>")
   const calls: string[] = []
-  track(Mosaic(node, { elements: [
-    { select: "section", on: { click: () => { calls.push("parent") } } },
-    { select: "button", on: { click: () => { calls.push("child") } } },
-    { select: "button", on: { click: () => { calls.push("duplicate") } } },
-  ] }))
+  track(Mosaic(node, { elements: {
+    section: { on: { click: () => { calls.push("parent") } } },
+    button: { on: { click: () => { calls.push("child") } } },
+    "section > button": { on: { click: () => { calls.push("overlap") } } },
+  } }))
   node.querySelector("span")!.click()
-  assert.deepEqual(calls, ["child", "duplicate", "parent"])
+  assert.deepEqual(calls, ["child", "overlap", "parent"])
 })
 
 it("cancels queued rendering, rejects pending dispatches, and keeps committed state", async () => {
@@ -164,10 +256,10 @@ it("cancels queued rendering, rejects pending dispatches, and keeps committed st
   const controller = track(Mosaic(node, {
     state: { count: 0 },
     actions: { increment: (state) => ({ count: state.count + 1 }) },
-    elements: [{ select: "output", attribute: ({ state }) => {
+    elements: { output: { attribute: ({ state }) => {
       render()
       return { "data-count": state.count }
-    } }],
+    } } },
   }))
   const unsubscribe = controller.subscribe(subscriber)
   const results = Promise.allSettled([controller.dispatch("increment"), controller.dispatch("increment")])
@@ -212,10 +304,10 @@ it("stops rendering when destroyed by a rendering callback", async () => {
   controller = track(Mosaic(node, {
     state: { count: 0 },
     actions: { increment: (state) => ({ count: state.count + 1 }) },
-    elements: [{ select: "output", attribute: ({ state }) => {
+    elements: { output: { attribute: ({ state }) => {
       if (state.count) controller.destroy()
       return { "data-count": state.count }
-    } }],
+    } } },
   }))
   await expect(controller.dispatch("increment")).rejects.toMatchObject({ name: "AbortError" })
   for (const output of node.children) assert.equal(output.getAttribute("data-count"), "0")
@@ -227,10 +319,10 @@ it("rebinds the same nodes after removing sync and consumer listeners", async ()
   const oldInput = vi.fn()
   const external = vi.fn()
   input.addEventListener("input", external)
-  const first = track(Mosaic(node, { state: { value: "" }, elements: [{ select: "input", sync: "value", on: { input: oldInput } }] }))
+  const first = track(Mosaic(node, { state: { value: "" }, elements: { input: { sync: "value", on: { input: oldInput } } } }))
   first.destroy()
   const currentInput = vi.fn()
-  const second = track(Mosaic(node, { state: { value: "" }, elements: [{ select: "input", sync: "value", on: { input: currentInput } }] }))
+  const second = track(Mosaic(node, { state: { value: "" }, elements: { input: { sync: "value", on: { input: currentInput } } } }))
   input.value = "changed"
   input.dispatchEvent(new Event("input"))
   await nextFrame()
@@ -247,7 +339,7 @@ it("rebinds the same nodes after removing sync and consumer listeners", async ()
 it("removes installed listeners when mounting fails", () => {
   const node = root("<button></button>")
   const click = vi.fn()
-  assert.throws(() => Mosaic(node, { elements: [{ select: "button", on: { click }, attribute: () => { throw new Error("mount failed") } }] }))
+  assert.throws(() => Mosaic(node, { elements: { button: { on: { click }, attribute: () => { throw new Error("mount failed") } } } }))
   node.querySelector("button")!.click()
   assert.equal(click.mock.calls.length, 0)
 })
@@ -259,10 +351,10 @@ it("handles destruction of dispatches started by event shorthand and async handl
   const controller = track(Mosaic(node, {
     state: { count: 0 },
     actions: { increment: (state) => ({ count: state.count + 1 }) },
-    elements: [
-      { select: "button:first-child", on: { click: "increment" } },
-      { select: "button:last-child", on: { click: async ({ dispatch }) => { await dispatch("increment") } } },
-    ],
+    elements: {
+      "button:first-child": { on: { click: "increment" } },
+      "button:last-child": { on: { click: async ({ dispatch }) => { await dispatch("increment") } } },
+    },
   }))
   buttons[0].click()
   buttons[1].click()
@@ -278,10 +370,10 @@ it("reports rejected event handlers and action shorthand without leaving unhandl
   const reported = vi.spyOn(globalThis, "reportError").mockImplementation(() => {})
   track(Mosaic(node, {
     actions: { fail: () => { throw failure } },
-    elements: [
-      { select: "button:first-child", on: { click: "fail" } },
-      { select: "button:last-child", on: { click: async () => { throw failure } } },
-    ],
+    elements: {
+      "button:first-child": { on: { click: "fail" } },
+      "button:last-child": { on: { click: async () => { throw failure } } },
+    },
   }))
   buttons[0].click()
   buttons[1].click()

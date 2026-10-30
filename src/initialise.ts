@@ -12,10 +12,15 @@ export function initialise<
 ) {
   const { controller } = store
   let state = config.state ?? ({} as State)
-  const elements = (config.elements ?? []).map((binding) => ({
-    ...binding,
-    targets: [...rootNode.querySelectorAll(binding.select)],
-  }))
+  if (Array.isArray(config.elements)) {
+    throw new TypeError("elements must be a selector-keyed object, not an array; move each select property to an object key")
+  }
+  const elements = Object.entries(config.elements ?? {}).map(
+    ([selector, binding]) => ({
+      ...binding,
+      targets: [...rootNode.querySelectorAll(selector)],
+    }),
+  )
 
   function listen(target: Element, type: string, callback: EventListener) {
     target.addEventListener(type, callback)

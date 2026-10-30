@@ -33,13 +33,13 @@ it.each([
   const controller = track(Mosaic(node, {
     state: { value: "configured" },
     actions: { clear: (state) => ({ ...state, value: "" }) },
-    elements: [
-      { select, sync: "value", on: { input: ({ state, getState }) => {
+    elements: {
+      [select]: { sync: "value", on: { input: ({ state, getState }) => {
         assert.equal(state.value, getState().value)
         observed.push(state.value)
       } } },
-      { select: "output", text: ({ state }) => state.value },
-    ],
+      output: { text: ({ state }) => state.value },
+    },
   }))
   assert.equal(controller.getState().value, "initial")
   assert.equal(node.querySelector("output")!.textContent, "initial")
@@ -60,7 +60,7 @@ it("initialises shared controls from the first match and mirrors typing and prog
   const controller = track(Mosaic(node, {
     state: { value: "configured" },
     actions: { clear: (state) => ({ ...state, value: "" }) },
-    elements: [{ select: "input, textarea", sync: "value", on: { input: ({ state }) => { observed.push(state.value) } } }],
+    elements: { "input, textarea": { sync: "value", on: { input: ({ state }) => { observed.push(state.value) } } } },
   }))
   assert.equal(controller.getState().value, "first")
   assert.deepEqual(controls.map((control) => control.value), ["first", "first", "first"])
@@ -73,15 +73,15 @@ it("initialises shared controls from the first match and mirrors typing and prog
   assert.deepEqual(controls.map((control) => control.value), ["", "", ""])
 })
 
-it("uses binding order for shared keys and initialises different keys independently", () => {
+it("uses selector declaration order for shared keys and initialises different keys independently", () => {
   const node = root('<input id="early" value="early"><input id="later" value="later"><textarea>other</textarea>')
   const controller = track(Mosaic(node, {
     state: { value: "configured", other: "configured" },
-    elements: [
-      { select: "#later", sync: "value" },
-      { select: "#early", sync: "value" },
-      { select: "textarea", sync: "other" },
-    ],
+    elements: {
+      "#later": { sync: "value" },
+      "#early": { sync: "value" },
+      textarea: { sync: "other" },
+    },
   }))
   assert.deepEqual(controller.getState(), { value: "later", other: "other" })
   assert.equal(node.querySelector<HTMLInputElement>("#early")!.value, "later")
@@ -92,10 +92,10 @@ it("updates sync before input action shorthand runs", async () => {
   const controller = track(Mosaic(node, {
     state: { value: "", observed: "" },
     actions: { record: (state) => ({ ...state, observed: state.value }) },
-    elements: [
-      { select: "input", sync: "value", on: { input: "record" } },
-      { select: "output", text: ({ state }) => state.observed },
-    ],
+    elements: {
+      input: { sync: "value", on: { input: "record" } },
+      output: { text: ({ state }) => state.observed },
+    },
   }))
   const input = node.querySelector("input")!
   input.value = "typed"
@@ -112,7 +112,7 @@ it("avoids redundant value assignments and preserves the typing selection", asyn
   const controller = track(Mosaic(node, {
     state: { value: "configured" },
     actions: { change: (state, value: string) => ({ ...state, value }) },
-    elements: [{ select: "input", sync: "value" }],
+    elements: { input: { sync: "value" } },
   }))
   assert.equal(setter.mock.calls.length, 0)
   await controller.dispatch("change", "initial")
@@ -134,10 +134,10 @@ it("does not overwrite composing controls and commits their final DOM value on c
   const controller = track(Mosaic(node, {
     state: { value: "" },
     actions: { change: (state, value: string) => ({ ...state, value }) },
-    elements: [
-      { select: "input", sync: "value" },
-      { select: "output", text: ({ state }) => state.value },
-    ],
+    elements: {
+      input: { sync: "value" },
+      output: { text: ({ state }) => state.value },
+    },
   }))
   input.dispatchEvent(new CompositionEvent("compositionstart"))
   input.value = "に"
@@ -169,7 +169,7 @@ it("tracks simultaneous composition per control and removes composition listener
   const controller = track(Mosaic(node, {
     state: { value: "" },
     actions: { change: (state, value: string) => ({ ...state, value }) },
-    elements: [{ select: "input", sync: "value" }],
+    elements: { input: { sync: "value" } },
   }))
   for (const control of [first, second]) control.dispatchEvent(new CompositionEvent("compositionstart"))
   first.value = "first draft"
@@ -183,14 +183,14 @@ it("tracks simultaneous composition per control and removes composition listener
   controller.destroy()
   second.dispatchEvent(new CompositionEvent("compositionend"))
   assert.equal(controller.getState().value, "first draft")
-  const replacement = track(Mosaic(node, { state: { value: "" }, elements: [{ select: "input", sync: "value" }] }))
+  const replacement = track(Mosaic(node, { state: { value: "" }, elements: { input: { sync: "value" } } }))
   assert.equal(replacement.getState().value, "first draft")
   assert.equal(second.value, "first draft")
 })
 
 it.each(['<input type="radio">', '<input type="file">', '<select multiple></select>', '<div></div>'])("rejects unsupported sync targets: %s", (html) => {
   const node = root(html)
-  assert.throws(() => Mosaic(node, { state: { value: "" }, elements: [{ select: "*", sync: "value" }] }), TypeError)
+  assert.throws(() => Mosaic(node, { state: { value: "" }, elements: { "*": { sync: "value" } } }), TypeError)
 })
 
 it("initialises sync before consumer input handlers in earlier bindings", () => {
@@ -198,11 +198,11 @@ it("initialises sync before consumer input handlers in earlier bindings", () => 
   const observed: string[] = []
   const controller = track(Mosaic(node, {
     state: { value: "", unmatched: "retained" },
-    elements: [
-      { select: "input", on: { input: ({ state }) => { observed.push(state.value) } } },
-      { select: "input", sync: "value" },
-      { select: ".missing", sync: "unmatched" },
-    ],
+    elements: {
+      input: { on: { input: ({ state }) => { observed.push(state.value) } } },
+      ":scope > input": { sync: "value" },
+      ".missing": { sync: "unmatched" },
+    },
   }))
   const input = node.querySelector("input")!
   input.value = "typed"
@@ -217,10 +217,10 @@ it.each([true, false])("initialises a checkbox from its live checked property: %
   input.checked = checked
   const controller = track(Mosaic(node, {
     state: { enabled: !checked },
-    elements: [
-      { select: "input", sync: "enabled" },
-      { select: "output", text: ({ state }) => state.enabled },
-    ],
+    elements: {
+      input: { sync: "enabled" },
+      output: { text: ({ state }) => state.enabled },
+    },
   }))
   assert.strictEqual(controller.getState().enabled, checked)
   assert.equal(node.querySelector("output")!.textContent, String(checked))
@@ -232,10 +232,10 @@ it("updates checkbox state automatically through real pointer and Space activati
   const input = node.querySelector("input")!
   const controller = track(Mosaic(node, {
     state: { enabled: false },
-    elements: [
-      { select: "input", sync: "enabled" },
-      { select: "output", text: ({ state }) => state.enabled },
-    ],
+    elements: {
+      input: { sync: "enabled" },
+      output: { text: ({ state }) => state.enabled },
+    },
   }))
   await userEvent.click(input)
   assert.isTrue(controller.getState().enabled)
@@ -254,16 +254,16 @@ it("updates before consumer input/change handlers, including change-only events"
   const observed: [string, boolean][] = []
   const controller = track(Mosaic(node, {
     state: { enabled: false },
-    elements: [
-      { select: "input", on: {
+    elements: {
+      input: { on: {
         input: ({ state, getState }) => {
           assert.strictEqual(state.enabled, getState().enabled)
           observed.push(["input", state.enabled])
         },
         change: ({ state }) => { observed.push(["change", state.enabled]) },
       } },
-      { select: "input", sync: "enabled" },
-    ],
+      ":scope > input": { sync: "enabled" },
+    },
   }))
   input.checked = true
   input.dispatchEvent(new Event("change"))
@@ -282,7 +282,7 @@ it("writes programmatic checkbox updates without redundant assignments or public
   const controller = track(Mosaic(node, {
     state: { enabled: true },
     actions: { change: (state, enabled: boolean) => ({ ...state, enabled }) },
-    elements: [{ select: "input", sync: "enabled" }],
+    elements: { input: { sync: "enabled" } },
   }))
   const subscriber = vi.fn()
   controller.subscribe(subscriber)
@@ -311,11 +311,11 @@ it("mirrors one boolean across checkboxes using the first bound checkbox at moun
   const controller = track(Mosaic(node, {
     state: { enabled: true, unbound: true },
     actions: { change: (state, enabled: boolean) => ({ ...state, enabled }) },
-    elements: [
-      { select: "#second", sync: "enabled" },
-      { select: "#first", sync: "enabled" },
-      { select: ".missing", sync: "unbound" },
-    ],
+    elements: {
+      "#second": { sync: "enabled" },
+      "#first": { sync: "enabled" },
+      ".missing": { sync: "unbound" },
+    },
   }))
   assert.deepEqual(controller.getState(), { enabled: false, unbound: true })
   assert.isFalse(first.checked)
@@ -331,13 +331,13 @@ it("mirrors one boolean across checkboxes using the first bound checkbox at moun
 it("removes checkbox listeners on destruction and supports rebinding", async () => {
   const node = root('<input type="checkbox">')
   const input = node.querySelector("input")!
-  const original = track(Mosaic(node, { state: { enabled: false }, elements: [{ select: "input", sync: "enabled" }] }))
+  const original = track(Mosaic(node, { state: { enabled: false }, elements: { input: { sync: "enabled" } } }))
   original.destroy()
   input.checked = true
   input.dispatchEvent(new Event("input"))
   input.dispatchEvent(new Event("change"))
   assert.isFalse(original.getState().enabled)
-  const replacement = track(Mosaic(node, { state: { enabled: false }, elements: [{ select: "input", sync: "enabled" }] }))
+  const replacement = track(Mosaic(node, { state: { enabled: false }, elements: { input: { sync: "enabled" } } }))
   assert.isTrue(replacement.getState().enabled)
   await userEvent.click(input)
   assert.isFalse(replacement.getState().enabled)
@@ -349,7 +349,7 @@ it.each(["checkbox-first", "text-first"])("rejects mixed checkbox/string control
   const selectors = order === "checkbox-first" ? ["#checkbox", "#text"] : ["#text", "#checkbox"]
   const config = {
     state: { value: false as string | boolean },
-    elements: selectors.map((select) => ({ select, sync: "value" as const })),
+    elements: Object.fromEntries(selectors.map((selector) => [selector, { sync: "value" as const }])),
   }
   const remove = vi.spyOn(node.querySelector(selectors[0])!, "removeEventListener")
   assert.throws(() => Mosaic(node, config), 'sync key "value" cannot mix checkbox and string controls')

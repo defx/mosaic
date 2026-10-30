@@ -59,7 +59,6 @@ export type EventBindings<State extends object, Actions> = {
 }
 
 export interface ElementConfig<State extends object, Actions = {}> {
-  select: string
   attribute?: (context: RenderContext<State>) => Attributes | null | undefined
   text?: (context: RenderContext<State>) => TextValue
   class?: (context: RenderContext<State>) => Classes | null | undefined
@@ -80,5 +79,5 @@ export interface MosaicConfig<
   Actions extends ActionHandlers<State> = {},
 > extends StoreConfig<State, Actions> {
   state?: State
-  elements?: ElementConfig<State, Actions>[]
+  elements?: Record<string, ElementConfig<State, Actions>>
 }

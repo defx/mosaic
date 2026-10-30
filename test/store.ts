@@ -23,13 +23,12 @@ function counter(onRender?: (count: number) => void) {
         count: state.count + amount,
       }),
     },
-    elements: [{
-      select: "output",
+    elements: { output: {
       attribute: ({ state }) => {
         onRender?.(state.count)
         return { "data-count": state.count }
       },
-    }],
+    } },
   })
   return { controller, output }
 }
@@ -266,14 +265,13 @@ describe("binding-owned state updates", () => {
     const controller = Mosaic(root, {
       state: { query: "configured" },
       actions: { clear: (state) => ({ ...state, query: "" }) },
-      elements: [
-        {
-          select: "input",
+      elements: {
+        input: {
           sync: "query",
           on: { input: ({ getState }) => { observed.push(getState().query) } },
         },
-        { select: "output", attribute: ({ state }) => ({ "data-query": state.query }) },
-      ],
+        output: { attribute: ({ state }) => ({ "data-query": state.query }) },
+      },
     })
     assert.equal(controller.getState().query, "DOM")
     assert.equal(output.getAttribute("data-query"), "DOM")
@@ -301,14 +299,13 @@ describe("binding-owned state updates", () => {
     const input = root.querySelector("input")!
     const controller = Mosaic(root, {
       state: { query: "" },
-      elements: [{
-        select: "input",
+      elements: { input: {
         sync: "query",
         attribute: ({ state }) => {
           if (state.query === "bad") throw failure
           return { "data-query": state.query }
         },
-      }],
+      } },
     })
 
     input.value = "bad"

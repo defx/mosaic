@@ -50,21 +50,19 @@ describe("navigation menu enhancement", () => {
           }
         },
       },
-      elements: [
-        {
-          select: "button",
+      elements: {
+        button: {
           on: {
             click: "toggleMenu",
           },
         },
-        {
-          select: "nav",
+        nav: {
           class: ({ state: { menuIsOpen } }) => ({
             hamburger: true,
             open: menuIsOpen,
           }),
         },
-      ],
+      },
     })
 
     assert.ok(rootNode.querySelector("nav")!.classList.contains("hamburger"))

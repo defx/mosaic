@@ -108,9 +108,8 @@ export const ComboBox = ({ rootNode, $$ }: ExampleContext) => {
       filteredOptions: options,
     },
     actions,
-    elements: [
-      {
-        select: "input[type=text]",
+    elements: {
+      "input[type=text]": {
         attribute: ({ state: {
           filteredOptions = [],
           selectedOption,
@@ -163,15 +162,13 @@ export const ComboBox = ({ rootNode, $$ }: ExampleContext) => {
           },
         },
       },
-      {
-        select: "[role=listbox]",
+      "[role=listbox]": {
         attribute: ({ state }) => ({
           id: listBoxId,
           hidden: !state.listboxOpen,
         }),
       },
-      {
-        select: "[role=option]",
+      "[role=option]": {
         attribute: ({ state: { filteredOptions, selectedOption, listboxOpen }, index: i }) => ({
           id: options[i].id,
           hidden: !filteredOptions.includes(options[i]),
@@ -186,8 +183,8 @@ export const ComboBox = ({ rootNode, $$ }: ExampleContext) => {
             rootNode.querySelector<HTMLInputElement>('input[type="text"]')!.focus()
           },
         },
-      },
-    ],
+      }
+    }
   }
   return config
 }
