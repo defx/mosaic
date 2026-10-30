@@ -45,8 +45,8 @@ console.log(controller.getState().count); // 2, with the DOM updated
 controller.destroy();
 ```
 
-`$` is an alias of `Mosaic`. A minified ESM entry is available at
-`mosaic/dist/mosaic.min.js`, including for use through an ESM-compatible CDN.
+<!-- `$` is an alias of `Mosaic`. A minified ESM entry is available at
+`mosaic/dist/mosaic.min.js`, including for use through an ESM-compatible CDN. -->
 
 ## Configuration and selectors
 
